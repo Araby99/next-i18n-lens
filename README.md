@@ -1,56 +1,67 @@
-# next-i18n-lens
+# 🔍 next-i18n-lens
 
-> A local-first, zero-dependency visual translation studio for Next.js (App Router) and React.
-
-Click any translated string in your running app → edit it → watch the JSON file update on disk. No cloud sync, no docker database setup, and zero bundle footprint in production.
-
----
-
-## How It Works: Zero-Width Unicode Watermarking
-
-`next-i18n-lens` leverages an innovative **Zero-Width Unicode Watermarking** technique to provide a zero-migration, plug-and-play visual editing experience. 
-
-1. **Watermark Encoding:** In development, when keys are translated, `next-i18n-lens` prepends an invisible Unicode zero-width watermark (using combinations of `\u200D` (ZWJ), `\u200B` (ZWS), and `\u200C` (ZWNJ)) to the output string.
-2. **DOM Scanning:** In the browser, our lightweight dev listener scans the DOM using a fast `TreeWalker` and a `MutationObserver`. It decodes the watermarks and dynamically adds `data-i18n-key` and `data-i18n-template` attributes to parent elements.
-3. **In-Context Editing:** When you hover over text, it highlights. Clicking it opens the editor panel in the Studio.
-4. **Input & Form Sanitization:** To prevent these invisible characters from polluting your forms, API payloads, or database, the library automatically patches `HTMLInputElement` and `HTMLTextAreaElement` prototypes and intercepts form submissions to strip watermarks from all user inputs before they are submitted.
-5. **Zero Production Footprint:** All proxies, DOM listeners, and interceptors are bypassed in production mode, ensuring raw strings are returned without any overhead.
+<div align="center">
+  <p><strong>Click, Edit, and Translate. Locally.</strong></p>
+  <p>A local-first, zero-dependency visual translation studio for Next.js (App Router) and React.</p>
+  
+  <p align="center">
+    <a href="https://www.npmjs.com/package/next-i18n-lens"><img src="https://img.shields.io/npm/v/next-i18n-lens.svg?style=flat-square" alt="NPM Version" /></a>
+    <a href="https://www.npmjs.com/package/next-i18n-lens"><img src="https://img.shields.io/npm/dm/next-i18n-lens.svg?style=flat-square" alt="NPM Downloads" /></a>
+    <a href="https://github.com/Araby99/next-i18n-lens/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/next-i18n-lens.svg?style=flat-square" alt="License" /></a>
+  </p>
+</div>
 
 ---
 
-## Features
+## 💡 How It Works: Zero-Width Unicode Watermarking
 
-- 🎯 **In-Context Visual Editing:** Hover to highlight translated elements; click to open the visual editor.
-- 🔍 **Locale Directory Sidebar:** A searchable directory displaying all translation keys and their current values in the active locale.
-- ⚡ **Atomic File Writes:** Safe temp-to-final swaps protect Next.js HMR from reading half-written JSON data.
-- 🔒 **Secure Local Operations:** Strict CORS policies, path-traversal guards, and key-depth recursion limits (up to 10 levels).
-- 🧼 **Form & Input Sanitization:** Automatic prototype patching strips zero-width characters before submission.
-- 🚀 **Zero Production Footprint:** All handlers and hooks are strictly bypassed in production.
-- 🎨 **Sleek 3-Column Interface:** Dark-mode Visual Translation Studio featuring live preview updates and custom confirmation modals.
-- 🤖 **CLI Migration Tool:** Automates refactoring of standard `react-i18next` usages.
+`next-i18n-lens` bridges your running application UI with your local JSON translation files using **Zero-Width Unicode Watermarking**. 
+
+```mermaid
+graph TD
+    A[Locale JSON Files] -->|1. Load & Watermark| B(Server / Client Translation Engine)
+    B -->|2. Render invisible characters| C[Running App UI in Browser]
+    C -->|3. DOM Scanner Decodes Keys| D{Hover & Click UI Element}
+    D -->|4. Post updates| E[Visual Translation Studio]
+    E -->|5. Atomic Write| A
+```
+
+1. **Watermark Encoding:** In development, when a translation key is looked up, the library prepends an invisible Unicode watermark (using combinations of `\u200D` (ZWJ), `\u200B` (ZWS), and `\u200C` (ZWNJ)) to the text.
+2. **DOM Scanning:** A lightweight dev-only browser listener scans the active DOM, decodes the watermarks, and dynamically hooks visual highlights onto translated elements.
+3. **Input & Clipboard Sanitization:** To ensure the watermarks never pollute your database, forms, or clipboard, the library automatically intercepts `'copy'`/`'paste'` events and patches controlled input elements at runtime.
+4. **Zero Production Footprint:** In production mode, all interceptors, listeners, and wrapper logic are bypassed completely, returning plain strings without overhead.
 
 ---
 
-## Installation
+## ✨ Features
 
+* 🎯 **In-Context Visual Editing:** Hover over any translated text to highlight it; click to instantly edit in the visual panel.
+* 📁 **Namespaced Folder Support:** Handles nested multi-file folder layouts (e.g., `locales/en/auth.json`) natively, merging files during load and separating them during mutation.
+* 🧼 **Input & Form Sanitization:** Patches controlled inputs and intercepts clipboard actions to strip watermarks in development automatically.
+* ⚡ **Atomic File Operations:** Prevents Next.js hot module replacement (HMR) reading corrupt half-written files via atomic temp-to-final writes.
+* 🔒 **Secure Local Boundaries:** Restricts directory traversal, verifies origins, and supports deep schemas up to 30 levels of recursion.
+* 🤖 **CLI Migration Tool:** Automatically parses and wraps standard `react-i18next` hooks with a single command.
+
+---
+
+## ⚡ Quick Setup
+
+### 1. Install Dependency
 ```bash
 npm install next-i18n-lens
 ```
 
 ---
 
-## Quick Setup
-
-### 1. Wire the Client Listener
-Render the `I18nLensProvider` component from `next-i18n-lens/react` in your root layout. It dynamically imports the DOM interceptors at runtime only in development mode.
-
+### 2. Add the Client Listener
+Mount the `I18nLensProvider` inside your root layout. This launches the dev-mode DOM scanners and intercepts clipboard copy/paste actions.
 ```tsx
 // app/layout.tsx
 import { I18nLensProvider } from 'next-i18n-lens/react';
 
 export default function RootLayout({ children }) {
   return (
-    <html>
+    <html lang="en">
       <body>
         <I18nLensProvider />
         {children}
@@ -60,140 +71,102 @@ export default function RootLayout({ children }) {
 }
 ```
 
-### 2. Set Up the Server API Handler
-Run the CLI initialization command in your project root directory to automatically generate the Server API mutation handler route:
+---
 
+### 3. Initialize Server Mutation Handler
+Initialize the server-side API endpoints automatically by running:
 ```bash
 npx next-i18n-lens init
 ```
-
-The CLI tool automatically detects:
-* **Language**: TypeScript (`tsconfig.json` check) or JavaScript.
-* **Routing Structure**: App Router vs. Pages Router.
-
-It writes the appropriate boilerplate file (e.g., `app/api/i18n-lens/mutate/route.ts` or `pages/api/i18n-lens/mutate.ts`) so you are ready to edit.
+*The CLI will check for TypeScript/JavaScript and write the appropriate mutation file (`/app/api/i18n-lens/mutate/route.ts` or `/pages/api/i18n-lens/mutate.ts`) directly into your project.*
 
 > [!NOTE]
-> If you prefer manual setup, create the route handler at `app/api/i18n-lens/mutate/route.ts` with the following content:
->
+> For manual setup, create `app/api/i18n-lens/mutate/route.ts` with:
 > ```typescript
 > import { createI18nLensHandler } from 'next-i18n-lens/server';
 > import * as path from 'path';
 > 
 > const handler = createI18nLensHandler({
->   localesPath: path.resolve('./locales'), // Adjust relative to project root
+>   localesPath: path.resolve('./locales'),
 > });
 > 
 > export const GET = handler;
 > export const POST = handler;
-> export const OPTIONS = handler; // Supports preflights in cross-origin studio runs
+> export const OPTIONS = handler;
 > ```
 
+---
 
-### 3. Enable Translation Key Watermarking
-Wrap your translation dictionaries or functions using `wrapTranslationEngine` so keys are watermarked in development.
+### 4. Enable Key Watermarking
+Wrap translation lookups to inject dev-only watermarks.
 
-#### Option A: Server Components (Automatic Helper)
-Use `createTranslations` from `next-i18n-lens/server` to load a locale JSON file and get an automatically watermarked translation object:
-
+#### Option A: Server Components (Direct Loader)
+Use `createTranslations` to load flat JSON files or directory-based namespaces:
 ```tsx
 import { createTranslations } from 'next-i18n-lens/server';
 
 export default async function Page({ searchParams }) {
   const { locale = 'en' } = await searchParams;
-  
   const t = createTranslations(locale, {
     supportedLocales: ['en', 'ar', 'es'],
     localesDir: './locales',
   });
 
-  return (
-    <main>
-      <h1>{t.home?.title}</h1>
-      <p>{t.home?.description}</p>
-    </main>
-  );
+  return <h1>{t.home?.welcome}</h1>;
 }
 ```
 
-#### Option B: Client/Hooks (e.g. `react-i18next` or `next-intl`)
-Wrap translation functions using `wrapTranslationEngine`.
-
-**With react-i18next:**
+#### Option B: Client-side Hooks (react-i18next or next-intl)
+Wrap hook return values with `wrapTranslationEngine`:
 ```tsx
 'use client';
 import { useTranslation } from 'react-i18next';
 import { wrapTranslationEngine } from 'next-i18n-lens/client';
 
-export default function WelcomeComponent() {
-  const { t: rawT } = useTranslation('home');
-  const t = wrapTranslationEngine(rawT, { keyPrefix: 'home' });
+export default function Page() {
+  const { t: rawT } = useTranslation('auth');
+  const t = wrapTranslationEngine(rawT, { keyPrefix: 'auth' });
 
-  return <h1>{t('welcome_message')}</h1>;
+  return <h1>{t('login.title')}</h1>;
 }
-```
-
-**With next-intl:**
-```tsx
-'use client';
-import { useTranslations } from 'next-intl';
-import { wrapTranslationEngine } from 'next-i18n-lens/client';
-
-export default function WelcomeComponent() {
-  const rawT = useTranslations('home');
-  const t = wrapTranslationEngine(rawT, { keyPrefix: 'home' });
-
-  return <h1>{t('welcome_message')}</h1>;
-}
-```
-
-#### Option C: Manual Data Attributes (Optional Fallback)
-If you prefer not to use the watermarking proxy, you can still manually annotate JSX elements:
-
-```tsx
-<p data-i18n-key="home.welcome" data-i18n-template="Welcome Back!">
-  {t('home.welcome')}
-</p>
 ```
 
 ---
 
-## CLI Migration Tool
-
-We provide a built-in CLI tool to automatically refactor existing `react-i18next` codebases to support `next-i18n-lens`.
-
-```bash
-npx next-i18n-lens migrate [options]
-```
-
-### Options:
-- `--dir <path>`: Directory to scan (default: current directory `.`)
-- `--exclude <list>`: Comma-separated list of directories to exclude (default: `node_modules,.next,dist,.git`)
-- `--dry-run`: Preview changes without writing them to disk
-
----
-
-## Running the Studio
-
-Start the visual editing studio alongside your Next.js development server.
-
-If running within the package workspace:
-```bash
-npm run studio:dev
-```
-
-If installed as a dependency, open the visual studio running on port `3010`:
+### 5. Launch the Visual Studio
+Boot the editing studio next to your local development server:
 ```bash
 npx next-i18n-lens studio --port 3010
 ```
-
-Open `http://localhost:3010` to launch the Visual Translation Studio. It will automatically load your Next.js app running on `http://localhost:3000`.
+Open `http://localhost:3010` to view the Studio, loaded with your app running at `http://localhost:3000`.
 
 ---
 
-## Non-Next.js Integration (Vite / Client-Side React)
+## 🛠️ CLI Reference
 
-If you are not using Next.js (e.g., a client-side Vite + React SPA), you do not have built-in API route handlers. You can replace Next.js API route handlers using a custom Vite plugin inside your `vite.config.ts`:
+### `init`
+Generates API route handlers based on your router structure (App vs Pages Router) and configuration language (TypeScript vs JavaScript).
+```bash
+npx next-i18n-lens init [--dir <path>]
+```
+
+### `studio`
+Spins up a lightweight, CORS-enabled HTTP server serving the Visual Studio assets statically.
+```bash
+npx next-i18n-lens studio [--port <number>]
+```
+
+### `migrate`
+Performs static analysis to scan and automatically wrap existing `react-i18next` hooks with `wrapTranslationEngine`.
+```bash
+npx next-i18n-lens migrate [--dir <path>] [--exclude <dirs>] [--dry-run]
+```
+
+---
+
+## ⚙️ Non-Next.js Integration (React + Vite SPA)
+
+If you are using a standard React Client-Side SPA (like Vite), you don't have Next.js API endpoints. You can use a custom Vite plugin inside `vite.config.ts` to capture mutation endpoints:
 
 ```typescript
 import { defineConfig } from 'vite';
@@ -211,10 +184,9 @@ export default defineConfig({
         const mutator = new FileMutator();
         
         server.middlewares.use(async (req, res, next) => {
-          if (req.url && req.url.startsWith('/api/i18n-lens/mutate')) {
+          if (req.url?.startsWith('/api/i18n-lens/mutate')) {
             const urlObj = new URL(req.url, 'http://localhost');
             
-            // Set CORS Headers for Studio communications
             res.setHeader('Access-Control-Allow-Origin', '*');
             res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
             res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -227,18 +199,27 @@ export default defineConfig({
 
             if (req.method === 'GET') {
               const locale = urlObj.searchParams.get('locale');
-              if (!locale) {
-                res.statusCode = 400;
-                res.end(JSON.stringify({ error: 'Missing locale parameter' }));
-                return;
-              }
+              const localesDir = path.resolve('./locales');
+              const target = path.join(localesDir, locale || 'en');
+              
+              res.setHeader('Content-Type', 'application/json');
               try {
-                const fileContent = fs.readFileSync(path.resolve(`./locales/${locale}.json`), 'utf-8');
-                res.setHeader('Content-Type', 'application/json');
-                res.end(fileContent);
-              } catch (err) {
-                res.statusCode = 404;
-                res.end(JSON.stringify({ error: 'Locale not found' }));
+                const isDir = fs.statSync(target).isDirectory();
+                if (isDir) {
+                  const data: Record<string, any> = {};
+                  const files = fs.readdirSync(target);
+                  for (const file of files) {
+                    if (file.endsWith('.json')) {
+                      const ns = file.slice(0, -5);
+                      data[ns] = JSON.parse(fs.readFileSync(path.join(target, file), 'utf-8'));
+                    }
+                  }
+                  res.end(JSON.stringify(data));
+                } else {
+                  res.end(fs.readFileSync(`${target}.json`, 'utf-8'));
+                }
+              } catch {
+                res.end(fs.readFileSync(path.join(localesDir, 'en.json'), 'utf-8'));
               }
               return;
             }
@@ -270,7 +251,6 @@ export default defineConfig({
 
 ---
 
-## License
+## ⚖️ License
 
-MIT License.
-
+MIT License. See [LICENSE](file:///e:/works/next-i18n-lens/LICENSE) for more details.
