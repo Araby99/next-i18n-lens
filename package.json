@@ -1,6 +1,29 @@
 {
   "name": "next-i18n-lens",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "description": "A local-first, zero-dependency visual translation studio for Next.js (App Router) and React.",
+  "license": "MIT",
+  "author": "Araby99",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Araby99/next-i18n-lens.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Araby99/next-i18n-lens/issues"
+  },
+  "homepage": "https://github.com/Araby99/next-i18n-lens#readme",
+  "keywords": [
+    "nextjs",
+    "react",
+    "i18n",
+    "internationalization",
+    "translation",
+    "studio",
+    "visual-editor",
+    "localization",
+    "in-context-editing",
+    "zero-dependency"
+  ],
   "type": "module",
   "main": "./dist/server/index.js",
   "bin": {
