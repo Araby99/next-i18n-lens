@@ -1,6 +1,6 @@
 {
   "name": "next-i18n-lens",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A local-first, zero-dependency visual translation studio for Next.js (App Router) and React.",
   "license": "MIT",
   "author": "Araby99",
@@ -58,10 +58,6 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
   },
-  "dependencies": {
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^2.3.0"
-  },
   "peerDependencies": {
     "next": ">=13.0.0",
     "react": ">=18.0.0",
@@ -75,10 +71,12 @@
     "@vitejs/plugin-react": "^5.2.0",
     "@vitest/coverage-v8": "^1.6.0",
     "autoprefixer": "^10.4.19",
+    "clsx": "^2.1.1",
     "jsdom": "^24.1.0",
     "postcss": "^8.4.38",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "tailwind-merge": "^2.3.0",
     "tailwindcss": "^3.4.3",
     "tsup": "^8.0.2",
     "typescript": "^5.4.5",
