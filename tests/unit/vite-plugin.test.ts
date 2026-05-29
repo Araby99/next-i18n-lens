@@ -288,4 +288,27 @@ describe('i18nLensVite plugin', () => {
     expect(mock.parsedBody).toMatchObject({ success: true, locale: 'en' });
     expect(fs.existsSync(path.join(tmpDir, 'en.json'))).toBe(false);
   });
+
+  // ─── transformIndexHtml ──────────────────────────────────────────────────
+
+  it('should inject merged fallback translations in development mode', () => {
+    fs.writeFileSync(path.join(tmpDir, 'es.json'), JSON.stringify({ greeting: 'Hola', page: { title: 'Título' } }));
+
+    const html = '<html><head><title>Test</title></head><body></body></html>';
+    const result = (plugin as any).transformIndexHtml(html);
+
+    expect(result).toContain('window.__i18n_lens_fallback__ =');
+    expect(result).toContain('Hola');
+    expect(result).toContain('Título');
+    expect(result).toContain('</head>');
+  });
+
+  it('should not inject merged fallback translations in production mode', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const html = '<html><head><title>Test</title></head><body></body></html>';
+    const result = (plugin as any).transformIndexHtml(html);
+
+    expect(result).toBe(html);
+    expect(result).not.toContain('window.__i18n_lens_fallback__');
+  });
 });

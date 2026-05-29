@@ -95,8 +95,9 @@ function buildProxy<T extends object>(
       const fullKey = keyPrefix ? `${keyPrefix}.${prop}` : prop;
 
       // If val is missing, try looking it up in fallback
-      if (val === undefined && options.fallback) {
-        const fbVal = getNestedProperty(options.fallback, fullKey);
+      const fallbackObj = options.fallback ?? (typeof window !== 'undefined' ? (window as any).__i18n_lens_fallback__ : undefined);
+      if (val === undefined && fallbackObj) {
+        const fbVal = getNestedProperty(fallbackObj, fullKey);
         if (fbVal !== undefined) {
           val = fbVal;
         }
@@ -126,8 +127,8 @@ function buildProxy<T extends object>(
             (typeof resolvedValue === 'string' &&
               (resolvedValue === args[0] || resolvedValue === calledKey));
 
-          if (isMissing && options.fallback) {
-            const fbVal = getNestedProperty(options.fallback, calledKey);
+          if (isMissing && fallbackObj) {
+            const fbVal = getNestedProperty(fallbackObj, calledKey);
             if (fbVal !== undefined) {
               resolvedValue = fbVal;
             }
@@ -158,6 +159,7 @@ function buildProxy<T extends object>(
             : args[0]
           : keyPrefix;
 
+      const fallbackObj = options.fallback ?? (typeof window !== 'undefined' ? (window as any).__i18n_lens_fallback__ : undefined);
       let resolvedValue = result;
       const isMissing =
         resolvedValue === undefined ||
@@ -166,8 +168,8 @@ function buildProxy<T extends object>(
         (typeof resolvedValue === 'string' &&
           (resolvedValue === args[0] || resolvedValue === calledKey));
 
-      if (isMissing && options.fallback) {
-        const fbVal = getNestedProperty(options.fallback, calledKey);
+      if (isMissing && fallbackObj) {
+        const fbVal = getNestedProperty(fallbackObj, calledKey);
         if (fbVal !== undefined) {
           resolvedValue = fbVal;
         }

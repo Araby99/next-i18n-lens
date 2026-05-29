@@ -76,4 +76,22 @@ describe('wrapTranslationEngine', () => {
     expect(decodeKey(wrapped.title)?.cleanText).toBe('Fallback Title');
     expect(decodeKey(wrapped.title)?.key).toBe('home.title');
   });
+
+  it('should fallback to window.__i18n_lens_fallback__ if defined and options.fallback is missing', () => {
+    const originalWindow = (globalThis as any).window;
+    (globalThis as any).window = {
+      __i18n_lens_fallback__: { welcome: 'Global Hi', title: 'Global Title' }
+    };
+
+    try {
+      const engine = { welcome: 'Hello' } as any;
+      const wrapped = wrapTranslationEngine(engine);
+
+      expect(decodeKey(wrapped.welcome)?.cleanText).toBe('Hello');
+      expect(decodeKey(wrapped.title)?.cleanText).toBe('Global Title');
+      expect(decodeKey(wrapped.title)?.key).toBe('title');
+    } finally {
+      (globalThis as any).window = originalWindow;
+    }
+  });
 });

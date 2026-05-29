@@ -2,6 +2,21 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { FileMutator } from './file-mutator.js';
 
+function deepMerge(target: any, source: any): any {
+  if (typeof target !== 'object' || target === null) return source;
+  if (typeof source !== 'object' || source === null) return target;
+
+  const result = { ...target };
+  for (const key of Object.keys(source)) {
+    if (key in target) {
+      result[key] = deepMerge(target[key], source[key]);
+    } else {
+      result[key] = source[key];
+    }
+  }
+  return result;
+}
+
 export interface VitePluginConfig {
   /** Absolute or relative path to the directory containing your locale JSON files. */
   localesPath: string;
@@ -292,5 +307,50 @@ export function i18nLensVite(config: VitePluginConfig) {
         }
       });
     },
+
+    transformIndexHtml(html: string) {
+      if (process.env['NODE_ENV'] === 'production') {
+        return html;
+      }
+      try {
+        const entries = fs.readdirSync(resolvedLocalesPath);
+        let fallbackData: Record<string, any> = {};
+        for (const entry of entries) {
+          if (entry.startsWith('.')) continue;
+          const entryPath = path.join(resolvedLocalesPath, entry);
+          let entryIsDir = false;
+          try {
+            entryIsDir = fs.statSync(entryPath).isDirectory();
+          } catch {}
+
+          if (entryIsDir) {
+            try {
+              const files = fs.readdirSync(entryPath);
+              for (const file of files) {
+                if (file.endsWith('.json')) {
+                  const ns = file.slice(0, -5);
+                  const raw = fs.readFileSync(path.join(entryPath, file), 'utf-8');
+                  try {
+                    const parsed = JSON.parse(raw);
+                    fallbackData[ns] = deepMerge(fallbackData[ns] || {}, parsed);
+                  } catch {}
+                }
+              }
+            } catch {}
+          } else if (entry.endsWith('.json')) {
+            const raw = fs.readFileSync(entryPath, 'utf-8');
+            try {
+              const parsed = JSON.parse(raw);
+              fallbackData = deepMerge(fallbackData, parsed);
+            } catch {}
+          }
+        }
+        const script = `<script>window.__i18n_lens_fallback__ = ${JSON.stringify(fallbackData)};</script>`;
+        return html.replace('</head>', `${script}\n</head>`);
+      } catch (err) {
+        console.warn('[i18n-lens] Failed to inject fallback data:', err);
+        return html;
+      }
+    }
   };
 }
