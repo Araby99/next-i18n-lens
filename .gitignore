@@ -35,7 +35,7 @@ lerna-debug.log*
 Thumbs.db
 
 # Repomix Outputs
-repomix-output.xml
+repomix-output*.xml
 
 # Temporary Files
 *.tmp
