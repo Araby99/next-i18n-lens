@@ -36,6 +36,9 @@ export const useStudio = () => {
   const [enLocaleData, setEnLocaleData] = useState<Record<string, string>>({});
   const [searchTerm, setSearchTerm] = useState<string>('');
 
+  // Feature 2: Active page key filtering — null means "show all"
+  const [visibleKeys, setVisibleKeys] = useState<string[] | null>(null);
+
   // Custom Confirmation Modal States (Keeping hook UI-agnostic)
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
   const [pendingElement, setPendingElement] = useState<SelectedElement | null>(null);
@@ -197,6 +200,8 @@ export const useStudio = () => {
       if (type === 'READY') {
         setConnectionStatus('connected');
         setCurrentPath(payload.url || '/');
+        // Reset visible keys on page navigation so the sidebar shows all keys briefly
+        setVisibleKeys(null);
         // Extract locale if embedded in URL path or query params
         try {
           const urlObj = new URL(payload.url, APP_ORIGIN);
@@ -215,6 +220,11 @@ export const useStudio = () => {
         selectElement(payload);
       } else if (type === 'ERROR') {
         setError(payload.error || 'Client-side error occurred.');
+      } else if (type === 'VISIBLE_KEYS_CHANGED') {
+        // payload is a string[] of translation keys visible on the current page
+        if (Array.isArray(payload)) {
+          setVisibleKeys(payload as string[]);
+        }
       }
     };
 
@@ -282,13 +292,27 @@ export const useStudio = () => {
   };
 
   // Filter dictionary keys based on search input (Phase 2)
+  // Also filter by visible page keys (Feature 2) when the iframe has reported them.
   const filteredKeys = Object.keys(localeData).filter((key) => {
+    // Contextual filter: only show keys present on the current page
+    if (visibleKeys !== null && !visibleKeys.includes(key)) {
+      return false;
+    }
     const val = localeData[key] || '';
     return (
       key.toLowerCase().includes(searchTerm.toLowerCase()) ||
       val.toLowerCase().includes(searchTerm.toLowerCase())
     );
   });
+
+  // Feature 3: Translation coverage — percentage of enLocaleData keys that have
+  // a non-empty value in the current locale.
+  const totalKeys = Object.keys(enLocaleData).length;
+  const translatedKeys = Object.keys(enLocaleData).filter((key) => {
+    const val = localeData[key];
+    return val !== undefined && val.trim() !== '';
+  }).length;
+  const coveragePercentage = totalKeys > 0 ? Math.round((translatedKeys / totalKeys) * 100) : 100;
 
   return {
     selected,
@@ -305,6 +329,7 @@ export const useStudio = () => {
     localeData,
     searchTerm,
     filteredKeys,
+    coveragePercentage,
     setSearchTerm,
     selectKeyDirectly,
     handleInputChange,

@@ -39,7 +39,7 @@ describe('DOMInterceptor', () => {
 
   // ─── Mouse / Click (legacy attribute-based, backward compat) ────────────
 
-  it('should add outline style on mouseover of a keyed element', () => {
+  it('should show the floating overlay on mouseover of a keyed element', () => {
     const el = document.createElement('span');
     el.setAttribute('data-i18n-key', 'home.title');
     el.innerText = 'Hello';
@@ -47,22 +47,25 @@ describe('DOMInterceptor', () => {
     interceptor.init();
 
     el.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-    expect(el.style.outline).toBe('2px dashed #3b82f6');
-    expect(el.style.cursor).toBe('pointer');
+
+    // The floating overlay should be visible (opacity non-zero)
+    const overlay = document.getElementById('i18n-lens-highlighter-overlay');
+    expect(overlay).not.toBeNull();
+    expect(overlay?.style.opacity).toBe('1');
   });
 
-  it('should remove outline on mouseout after hover', () => {
+  it('should hide the floating overlay on mouseout after hover', () => {
     const el = document.createElement('span');
     el.setAttribute('data-i18n-key', 'home.title');
     document.body.appendChild(el);
     interceptor.init();
 
     el.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-    expect(el.style.outline).toBe('2px dashed #3b82f6');
+    const overlay = document.getElementById('i18n-lens-highlighter-overlay');
+    expect(overlay?.style.opacity).toBe('1');
 
     el.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
-    expect(el.style.outline).toBe('');
-    expect(el.style.cursor).toBe('');
+    expect(overlay?.style.opacity).toBe('0');
   });
 
   it('should call onElementSelected with correct payload on click', () => {
@@ -73,7 +76,7 @@ describe('DOMInterceptor', () => {
     document.body.appendChild(el);
     interceptor.init();
 
-    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, altKey: true }));
     expect(onElementSelected).toHaveBeenCalledWith({
       key: 'dashboard.welcome',
       fallbackValue: 'Welcome',
@@ -88,12 +91,24 @@ describe('DOMInterceptor', () => {
     document.body.appendChild(el);
     interceptor.init();
 
-    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, altKey: true }));
     expect(onElementSelected).toHaveBeenCalledWith({
       key: 'dashboard.welcome',
       fallbackValue: 'Fallback Text',
       currentValue: 'Fallback Text',
     });
+  });
+
+  it('should NOT call onElementSelected when clicking a keyed element WITHOUT Alt key', () => {
+    const el = document.createElement('p');
+    el.setAttribute('data-i18n-key', 'dashboard.welcome');
+    el.innerText = 'Welcome';
+    document.body.appendChild(el);
+    interceptor.init();
+
+    // Click without altKey — should propagate naturally (no selection)
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, altKey: false }));
+    expect(onElementSelected).not.toHaveBeenCalled();
   });
 
   it('should not call onElementSelected when clicking a non-keyed element', () => {
@@ -102,8 +117,42 @@ describe('DOMInterceptor', () => {
     document.body.appendChild(el);
     interceptor.init();
 
-    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, altKey: true }));
     expect(onElementSelected).not.toHaveBeenCalled();
+  });
+
+  // ─── Feature 4: Floating Overlay ─────────────────────────────────────────
+
+  it('should inject the floating overlay div into document.body on init', () => {
+    interceptor.init();
+    const overlay = document.getElementById('i18n-lens-highlighter-overlay');
+    expect(overlay).not.toBeNull();
+    expect(overlay?.style.pointerEvents).toBe('none');
+  });
+
+  it('should remove the floating overlay from body on destroy', () => {
+    interceptor.init();
+    interceptor.destroy();
+    const overlay = document.getElementById('i18n-lens-highlighter-overlay');
+    expect(overlay).toBeNull();
+  });
+
+  // ─── Feature 2: getActiveKeys ─────────────────────────────────────────────
+
+  it('should return all unique data-i18n-key values from getActiveKeys()', () => {
+    const el1 = document.createElement('p');
+    el1.setAttribute('data-i18n-key', 'home.title');
+    const el2 = document.createElement('p');
+    el2.setAttribute('data-i18n-key', 'home.subtitle');
+    const el3 = document.createElement('p');
+    el3.setAttribute('data-i18n-key', 'home.title'); // duplicate
+    document.body.append(el1, el2, el3);
+
+    interceptor.init();
+    const keys = interceptor.getActiveKeys();
+    expect(keys).toHaveLength(2);
+    expect(keys).toContain('home.title');
+    expect(keys).toContain('home.subtitle');
   });
 
   // ─── Phase 3: Watermark DOM Scanner ─────────────────────────────────────
@@ -213,7 +262,7 @@ describe('DOMInterceptor', () => {
       configurable: true,
     });
 
-    parent.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    parent.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, altKey: true }));
 
     expect(onElementSelected).toHaveBeenCalledWith(
       expect.objectContaining({

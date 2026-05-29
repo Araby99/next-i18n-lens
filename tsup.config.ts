@@ -4,6 +4,7 @@ export default defineConfig({
   entry: {
     'client/index': 'src/client/index.ts',
     'server/index': 'src/server/index.ts',
+    'vite/index': 'src/server/vite-plugin.ts',
     'react/index': 'src/react/index.tsx',
     'codemod/index': 'src/codemod/index.ts',
   },
@@ -13,5 +14,6 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   minify: false,
-  external: ['next', 'react', 'react-dom', 'fs', 'path', 'typescript'],
+  external: ['next', 'react', 'react-dom', 'fs', 'path', 'typescript', 'vite'],
 });
+

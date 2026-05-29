@@ -1,6 +1,9 @@
 import React from 'react';
 import { IframeViewer, EditorPanel, useStudio } from './features/dashboard/index.js';
 
+// Injected by Vite at build/dev time from package.json version (see vite.config.ts).
+declare const __STUDIO_VERSION__: string;
+
 export const App = () => {
   const {
     selected,
@@ -17,6 +20,7 @@ export const App = () => {
     searchTerm,
     filteredKeys,
     localeData,
+    coveragePercentage,
     setSearchTerm,
     selectKeyDirectly,
     handleInputChange,
@@ -46,10 +50,34 @@ export const App = () => {
           </div>
         </div>
 
-        {/* Documentation links or tags */}
-        <div className="flex items-center gap-4">
+        {/* Coverage progress bar + version badge */}
+        <div className="flex items-center gap-5">
+          {/* Translation coverage metric */}
+          <div className="flex items-center gap-2.5" title={`${coveragePercentage}% of keys translated`}>
+            <span className="text-[10px] text-slate-500 font-medium select-none whitespace-nowrap">
+              Coverage
+            </span>
+            <div className="w-28 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-700 ease-out"
+                style={{
+                  width: `${coveragePercentage}%`,
+                  background:
+                    coveragePercentage >= 80
+                      ? 'linear-gradient(90deg, #34d399, #059669)'
+                      : coveragePercentage >= 40
+                      ? 'linear-gradient(90deg, #fbbf24, #f59e0b)'
+                      : 'linear-gradient(90deg, #f87171, #ef4444)',
+                }}
+              />
+            </div>
+            <span className="text-[10px] font-bold font-mono text-slate-400 select-none tabular-nums">
+              {coveragePercentage}%
+            </span>
+          </div>
+
           <span className="px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-[10px] font-bold text-slate-400 select-none">
-            v0.1.0 (BETA)
+            v{__STUDIO_VERSION__} (BETA)
           </span>
         </div>
       </header>

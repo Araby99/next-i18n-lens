@@ -1,4 +1,4 @@
-export type ClientMessageType = 'ELEMENT_SELECTED' | 'READY' | 'ERROR';
+export type ClientMessageType = 'ELEMENT_SELECTED' | 'READY' | 'ERROR' | 'VISIBLE_KEYS_CHANGED';
 export type StudioMessageType = 'APPLY_PREVIEW' | 'CLEAR_SELECTION';
 
 export interface TranslationPayload {
@@ -36,6 +36,16 @@ export class IframeBridge {
         // Drop invalid payload silently
         return;
       }
+    }
+
+    if (type === 'VISIBLE_KEYS_CHANGED') {
+      // Validate payload is an array of valid key strings
+      if (!Array.isArray(payload)) return;
+      const validKeys = (payload as unknown[]).filter(
+        (k): k is string => typeof k === 'string' && /^[a-zA-Z0-9._-]+$/.test(k)
+      );
+      // Replace the payload with the sanitized array
+      payload = validKeys;
     }
 
     const message = {

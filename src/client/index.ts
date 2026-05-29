@@ -24,9 +24,14 @@ if (
   const allowedOrigin = urlParams.get('i18n-lens-origin') || 'http://localhost:3010';
 
   const bridge = new IframeBridge(allowedOrigin);
-  const interceptor = new DOMInterceptor((payload) => {
-    bridge.sendToParent('ELEMENT_SELECTED', payload);
-  });
+  const interceptor = new DOMInterceptor(
+    (payload) => {
+      bridge.sendToParent('ELEMENT_SELECTED', payload);
+    },
+    (keys) => {
+      bridge.sendToParent('VISIBLE_KEYS_CHANGED', keys);
+    }
+  );
 
   interceptor.init();
 

@@ -1,6 +1,22 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import * as path from 'path';
+import { createRequire } from 'module';
+
+// Resolve the package version at build/dev time from env (set by npm)
+// or by reading package.json directly as a fallback.
+function resolvePackageVersion(): string {
+  if (process.env['npm_package_version']) {
+    return process.env['npm_package_version'];
+  }
+  try {
+    const require = createRequire(import.meta.url);
+    const pkg = require(path.resolve(__dirname, '../../package.json'));
+    return pkg.version || '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+}
 
 export default defineConfig(({ command }) => {
   // Auto-close dev server when parent process closes (e.g. on Windows Ctrl+C or terminal close)
@@ -11,9 +27,16 @@ export default defineConfig(({ command }) => {
     });
   }
 
+  const studioVersion = resolvePackageVersion();
+
   return {
     plugins: [react()],
     root: path.resolve(__dirname),
+    define: {
+      // Inject the package version as a compile-time constant.
+      // Use JSON.stringify to produce a valid JS string literal.
+      __STUDIO_VERSION__: JSON.stringify(studioVersion),
+    },
     server: {
       port: 3010,
       strictPort: true,
