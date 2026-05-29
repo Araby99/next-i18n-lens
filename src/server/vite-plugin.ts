@@ -78,16 +78,20 @@ export function i18nLensVite(config: VitePluginConfig) {
         if (process.env['NODE_ENV'] === 'production') {
           res.statusCode = 403;
           res.setHeader('Content-Type', 'application/json');
-          res.end(JSON.stringify({ error: 'Forbidden: only available in development mode.', code: 'FORBIDDEN' }));
+          res.end(
+            JSON.stringify({
+              error: 'Forbidden: only available in development mode.',
+              code: 'FORBIDDEN',
+            })
+          );
           return;
         }
 
         const allowedOrigins = ['http://localhost:3010', 'http://127.0.0.1:3010'];
         const origin = req.headers['origin'] || '';
         const isLocalhostStudio = /^http:\/\/(localhost|127\.0\.0\.1):301[0-9]$/.test(origin);
-        const allowedOrigin = (allowedOrigins.includes(origin) || isLocalhostStudio)
-          ? origin
-          : (allowedOrigins[0] || '');
+        const allowedOrigin =
+          allowedOrigins.includes(origin) || isLocalhostStudio ? origin : allowedOrigins[0] || '';
 
         const corsHeaders: Record<string, string> = {
           'Access-Control-Allow-Origin': allowedOrigin,
@@ -124,7 +128,12 @@ export function i18nLensVite(config: VitePluginConfig) {
                 res.end(JSON.stringify(metadata));
               } catch (err: any) {
                 res.statusCode = 500;
-                res.end(JSON.stringify({ error: `Failed to fetch keys metadata: ${err.message}`, code: 'KEYS_METADATA_FAILED' }));
+                res.end(
+                  JSON.stringify({
+                    error: `Failed to fetch keys metadata: ${err.message}`,
+                    code: 'KEYS_METADATA_FAILED',
+                  })
+                );
               }
               return;
             }
@@ -136,18 +145,24 @@ export function i18nLensVite(config: VitePluginConfig) {
                 res.end(JSON.stringify(localesList));
               } catch (err: any) {
                 res.statusCode = 500;
-                res.end(JSON.stringify({ error: `Failed to list locales: ${err.message}`, code: 'LIST_LOCALES_FAILED' }));
+                res.end(
+                  JSON.stringify({
+                    error: `Failed to list locales: ${err.message}`,
+                    code: 'LIST_LOCALES_FAILED',
+                  })
+                );
               }
               return;
             }
 
-            if (
-              locale.length < 2 ||
-              locale.length > 10 ||
-              !LOCALE_RE.test(locale)
-            ) {
+            if (locale.length < 2 || locale.length > 10 || !LOCALE_RE.test(locale)) {
               res.statusCode = 400;
-              res.end(JSON.stringify({ error: 'Invalid locale string parameter.', code: 'INVALID_LOCALE_FORMAT' }));
+              res.end(
+                JSON.stringify({
+                  error: 'Invalid locale string parameter.',
+                  code: 'INVALID_LOCALE_FORMAT',
+                })
+              );
               return;
             }
 
@@ -180,7 +195,12 @@ export function i18nLensVite(config: VitePluginConfig) {
                 res.end(content);
               } catch (err: any) {
                 res.statusCode = 404;
-                res.end(JSON.stringify({ error: `Failed to load locale: ${err.message}`, code: 'LOCALE_LOAD_FAILED' }));
+                res.end(
+                  JSON.stringify({
+                    error: `Failed to load locale: ${err.message}`,
+                    code: 'LOCALE_LOAD_FAILED',
+                  })
+                );
               }
             }
             return;
@@ -190,7 +210,9 @@ export function i18nLensVite(config: VitePluginConfig) {
           if (req.method === 'POST') {
             let bodyText = '';
             await new Promise<void>((resolve, reject) => {
-              req.on('data', (chunk: Buffer) => { bodyText += chunk.toString(); });
+              req.on('data', (chunk: Buffer) => {
+                bodyText += chunk.toString();
+              });
               req.on('end', resolve);
               req.on('error', reject);
             });
@@ -215,7 +237,12 @@ export function i18nLensVite(config: VitePluginConfig) {
                 !LOCALE_RE.test(locale)
               ) {
                 res.statusCode = 400;
-                res.end(JSON.stringify({ error: 'Invalid locale string parameter.', code: 'INVALID_LOCALE_FORMAT' }));
+                res.end(
+                  JSON.stringify({
+                    error: 'Invalid locale string parameter.',
+                    code: 'INVALID_LOCALE_FORMAT',
+                  })
+                );
                 return;
               }
               await mutator.addLocale(resolvedLocalesPath, locale);
@@ -236,7 +263,12 @@ export function i18nLensVite(config: VitePluginConfig) {
                 !LOCALE_RE.test(newLocale)
               ) {
                 res.statusCode = 400;
-                res.end(JSON.stringify({ error: 'Invalid oldLocale or newLocale parameter.', code: 'INVALID_LOCALE_FORMAT' }));
+                res.end(
+                  JSON.stringify({
+                    error: 'Invalid oldLocale or newLocale parameter.',
+                    code: 'INVALID_LOCALE_FORMAT',
+                  })
+                );
                 return;
               }
               await mutator.renameLocale(resolvedLocalesPath, locale, newLocale);
@@ -253,7 +285,12 @@ export function i18nLensVite(config: VitePluginConfig) {
                 !LOCALE_RE.test(locale)
               ) {
                 res.statusCode = 400;
-                res.end(JSON.stringify({ error: 'Invalid locale string parameter.', code: 'INVALID_LOCALE_FORMAT' }));
+                res.end(
+                  JSON.stringify({
+                    error: 'Invalid locale string parameter.',
+                    code: 'INVALID_LOCALE_FORMAT',
+                  })
+                );
                 return;
               }
               await mutator.deleteLocale(resolvedLocalesPath, locale);
@@ -262,7 +299,6 @@ export function i18nLensVite(config: VitePluginConfig) {
               return;
             }
 
-
             if (
               typeof locale !== 'string' ||
               locale.length < 2 ||
@@ -270,7 +306,9 @@ export function i18nLensVite(config: VitePluginConfig) {
               !LOCALE_RE.test(locale)
             ) {
               res.statusCode = 400;
-              res.end(JSON.stringify({ error: 'Invalid locale string.', code: 'INVALID_LOCALE_FORMAT' }));
+              res.end(
+                JSON.stringify({ error: 'Invalid locale string.', code: 'INVALID_LOCALE_FORMAT' })
+              );
               return;
             }
 
@@ -303,7 +341,12 @@ export function i18nLensVite(config: VitePluginConfig) {
           res.end(JSON.stringify({ error: 'Method Not Allowed', code: 'METHOD_NOT_ALLOWED' }));
         } catch (err: any) {
           res.statusCode = 500;
-          res.end(JSON.stringify({ error: err.message || 'Internal Server Error', code: 'INTERNAL_ERROR' }));
+          res.end(
+            JSON.stringify({
+              error: err.message || 'Internal Server Error',
+              code: 'INTERNAL_ERROR',
+            })
+          );
         }
       });
     },
@@ -351,6 +394,6 @@ export function i18nLensVite(config: VitePluginConfig) {
         console.warn('[i18n-lens] Failed to inject fallback data:', err);
         return html;
       }
-    }
+    },
   };
 }

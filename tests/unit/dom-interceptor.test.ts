@@ -31,7 +31,7 @@ describe('DOMInterceptor', () => {
   it('should attach mouseover and click listeners on init', () => {
     const addSpy = vi.spyOn(window, 'addEventListener');
     interceptor.init();
-    const eventNames = addSpy.mock.calls.map(c => c[0]);
+    const eventNames = addSpy.mock.calls.map((c) => c[0]);
     expect(eventNames).toContain('mouseover');
     expect(eventNames).toContain('mouseout');
     expect(eventNames).toContain('click');
@@ -262,7 +262,9 @@ describe('DOMInterceptor', () => {
       configurable: true,
     });
 
-    parent.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, altKey: true }));
+    parent.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, cancelable: true, altKey: true })
+    );
 
     expect(onElementSelected).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -348,7 +350,7 @@ describe('DOMInterceptor', () => {
       getData: mockGetData,
     };
     event.preventDefault = mockPreventDefault;
-    
+
     // Set target of event to input
     Object.defineProperty(event, 'target', { value: input, enumerable: true });
 

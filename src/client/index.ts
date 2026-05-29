@@ -4,7 +4,12 @@ import { DOMInterceptor } from './dom-interceptor.js';
 import { IframeBridge } from './iframe-bridge.js';
 
 export { DOMInterceptor } from './dom-interceptor.js';
-export { IframeBridge, type TranslationPayload, type ClientMessageType, type StudioMessageType } from './iframe-bridge.js';
+export {
+  IframeBridge,
+  type TranslationPayload,
+  type ClientMessageType,
+  type StudioMessageType,
+} from './iframe-bridge.js';
 export { encodeKey, decodeKey, stripWatermark, hasWatermark } from './watermark.js';
 
 // wrapTranslationEngine lives in wrap.ts (no 'use client') so it can also be

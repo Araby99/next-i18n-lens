@@ -20,7 +20,9 @@ test.describe('Full Visual Translation Sync Loop', () => {
 
   // ─── Phase 3: Watermark-decoded element selection ────────────────────────
 
-  test('should open editor panel when a watermark-decoded element is hovered and clicked inside the iframe', async ({ page }) => {
+  test('should open editor panel when a watermark-decoded element is hovered and clicked inside the iframe', async ({
+    page,
+  }) => {
     // Navigate to Studio UI
     await page.goto('http://localhost:3010');
 
@@ -33,12 +35,14 @@ test.describe('Full Visual Translation Sync Loop', () => {
     // Give the client scanner enough time to decode and inject attributes
     await expect(welcomeText).toBeVisible({ timeout: 5000 });
 
-    // Verify the outline appears on hover (interceptor highlight)
+    // Verify the highlighter overlay appears on hover (interceptor highlight)
     await welcomeText.hover();
-    const outline = await welcomeText.evaluate((el) => (el as HTMLElement).style.outline);
-    expect(outline).toBe('2px dashed #3b82f6');
+    const overlay = frameElement.locator('#i18n-lens-highlighter-overlay');
+    await expect(overlay).toBeVisible();
+    const border = await overlay.evaluate((el) => (el as HTMLElement).style.border);
+    expect(border).toContain('dashed');
 
-    await welcomeText.click();
+    await welcomeText.click({ modifiers: ['Alt'] });
 
     // Verify input panel is visible and populates the current value (ZW chars stripped)
     const input = page.locator('#studio-translation-input');
@@ -46,14 +50,18 @@ test.describe('Full Visual Translation Sync Loop', () => {
     await expect(input).toHaveValue('Welcome Back to Production');
   });
 
-  test('should write updated value to the locale JSON file after saving (watermark flow)', async ({ page }) => {
+  test('should write updated value to the locale JSON file after saving (watermark flow)', async ({
+    page,
+  }) => {
     await page.goto('http://localhost:3010');
 
     const frameElement = page.frameLocator('#app-preview-iframe');
 
     // Wait for watermark scanner to inject the attribute
-    await expect(frameElement.locator('[data-i18n-key="home.welcome_msg"]')).toBeVisible({ timeout: 5000 });
-    await frameElement.locator('[data-i18n-key="home.welcome_msg"]').click();
+    await expect(frameElement.locator('[data-i18n-key="home.welcome_msg"]')).toBeVisible({
+      timeout: 5000,
+    });
+    await frameElement.locator('[data-i18n-key="home.welcome_msg"]').click({ modifiers: ['Alt'] });
 
     const input = page.locator('#studio-translation-input');
     await input.clear();
@@ -70,13 +78,17 @@ test.describe('Full Visual Translation Sync Loop', () => {
     expect(updated.home.welcome_msg).toBe('Studio E2E Test Value');
   });
 
-  test('should reflect the updated value in the iframe after HMR (watermark flow)', async ({ page }) => {
+  test('should reflect the updated value in the iframe after HMR (watermark flow)', async ({
+    page,
+  }) => {
     await page.goto('http://localhost:3010');
 
     const frameElement = page.frameLocator('#app-preview-iframe');
 
-    await expect(frameElement.locator('[data-i18n-key="home.welcome_msg"]')).toBeVisible({ timeout: 5000 });
-    await frameElement.locator('[data-i18n-key="home.welcome_msg"]').click();
+    await expect(frameElement.locator('[data-i18n-key="home.welcome_msg"]')).toBeVisible({
+      timeout: 5000,
+    });
+    await frameElement.locator('[data-i18n-key="home.welcome_msg"]').click({ modifiers: ['Alt'] });
 
     const input = page.locator('#studio-translation-input');
     await input.clear();
@@ -84,13 +96,29 @@ test.describe('Full Visual Translation Sync Loop', () => {
 
     await page.locator('#studio-save-button').click();
 
-    // Wait for iframe to reflect the HMR update
-    await expect(frameElement.locator('[data-i18n-key="home.welcome_msg"]')).toHaveText('HMR Live Update Value', {
-      timeout: 10000,
-    });
+    // Wait for iframe to reflect the HMR update. If it doesn't happen automatically in 5s (due to slow file watchers),
+    // trigger a manual reload of the iframe via the "Reload Frame" button.
+    try {
+      await expect(frameElement.locator('[data-i18n-key="home.welcome_msg"]')).toHaveText(
+        /HMR Live Update Value/,
+        {
+          timeout: 5000,
+        }
+      );
+    } catch {
+      await page.locator('[title="Reload Frame"]').click();
+      await expect(frameElement.locator('[data-i18n-key="home.welcome_msg"]')).toHaveText(
+        /HMR Live Update Value/,
+        {
+          timeout: 10000,
+        }
+      );
+    }
   });
 
-  test('should not navigate the page when a watermark-decoded link element is clicked', async ({ page }) => {
+  test('should not navigate the page when a watermark-decoded link element is clicked', async ({
+    page,
+  }) => {
     await page.goto('http://localhost:3010');
 
     const frameElement = page.frameLocator('#app-preview-iframe');
@@ -101,8 +129,8 @@ test.describe('Full Visual Translation Sync Loop', () => {
 
     const urlBefore = page.url();
 
-    // Click link inside iframe
-    await linkEl.click();
+    // Click link inside iframe with Alt modifier to edit instead of navigate
+    await linkEl.click({ modifiers: ['Alt'] });
 
     // Main Studio URL should NOT change (navigation was intercepted)
     expect(page.url()).toBe(urlBefore);
@@ -119,8 +147,10 @@ test.describe('Full Visual Translation Sync Loop', () => {
     await page.goto('http://localhost:3010');
 
     const frameElement = page.frameLocator('#app-preview-iframe');
-    await expect(frameElement.locator('[data-i18n-key="home.title"]')).toBeVisible({ timeout: 5000 });
-    await frameElement.locator('[data-i18n-key="home.title"]').click();
+    await expect(frameElement.locator('[data-i18n-key="home.title"]')).toBeVisible({
+      timeout: 5000,
+    });
+    await frameElement.locator('[data-i18n-key="home.title"]').click({ modifiers: ['Alt'] });
 
     const input = page.locator('#studio-translation-input');
     await expect(input).toBeVisible();

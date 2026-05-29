@@ -7,7 +7,7 @@ const APP_ORIGIN = (import.meta as any).env?.VITE_APP_ORIGIN || 'http://localhos
 function flattenObject(obj: any, prefix = ''): Record<string, string> {
   const result: Record<string, string> = {};
   if (!obj || typeof obj !== 'object') return result;
-  
+
   for (const key in obj) {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
       const newKey = prefix ? `${prefix}.${key}` : key;
@@ -65,7 +65,9 @@ export const useStudio = () => {
       if (Array.isArray(list)) {
         setLocales(list);
         if (selectDefault && list.length > 0) {
-          setLocale(prev => list.includes(prev) ? prev : (list.includes('en') ? 'en' : list[0] || 'en'));
+          setLocale((prev) =>
+            list.includes(prev) ? prev : list.includes('en') ? 'en' : list[0] || 'en'
+          );
         }
       }
     } catch (err: any) {
@@ -125,9 +127,11 @@ export const useStudio = () => {
   useEffect(() => {
     if (connectionStatus === 'connected') {
       fetch(`${APP_ORIGIN}/api/i18n-lens/mutate?locale=en`)
-        .then(res => res.json())
-        .then(data => setEnLocaleData(flattenObject(data)))
-        .catch(err => console.warn('[i18n-lens] Failed to load reference English locale:', err.message));
+        .then((res) => res.json())
+        .then((data) => setEnLocaleData(flattenObject(data)))
+        .catch((err) =>
+          console.warn('[i18n-lens] Failed to load reference English locale:', err.message)
+        );
     }
   }, [connectionStatus]);
 
@@ -143,14 +147,18 @@ export const useStudio = () => {
     if (selected) {
       const activeValue = localeData[selected.key] || '';
       const enValue = enLocaleData[selected.key] || selected.fallbackValue || '';
-      
+
       // Only update if value in localeData is different, to avoid overwriting ongoing typing
       if (selected.currentValue !== activeValue) {
-        setSelected(prev => prev ? {
-          ...prev,
-          currentValue: activeValue,
-          fallbackValue: enValue
-        } : null);
+        setSelected((prev) =>
+          prev
+            ? {
+                ...prev,
+                currentValue: activeValue,
+                fallbackValue: enValue,
+              }
+            : null
+        );
         setInputValue(activeValue);
       }
     }
@@ -168,7 +176,6 @@ export const useStudio = () => {
     }
   };
 
-
   // Helper to send message to iframe
   const sendToIframe = useCallback((type: string, payload?: any) => {
     if (iframeRef.current && iframeRef.current.contentWindow) {
@@ -185,24 +192,27 @@ export const useStudio = () => {
     sendToIframe('APPLY_PREVIEW', { key: selected?.key, value });
   };
 
-  const selectElement = useCallback((newElement: SelectedElement) => {
-    // Expose the custom Confirmation Modal state instead of using blocking window.confirm (RULE STD-004)
-    if (hasUnsavedChanges) {
-      setPendingElement(newElement);
-      setShowConfirmModal(true);
-      return;
-    }
+  const selectElement = useCallback(
+    (newElement: SelectedElement) => {
+      // Expose the custom Confirmation Modal state instead of using blocking window.confirm (RULE STD-004)
+      if (hasUnsavedChanges) {
+        setPendingElement(newElement);
+        setShowConfirmModal(true);
+        return;
+      }
 
-    const rawValue = localeData[newElement.key] ?? newElement.currentValue;
+      const rawValue = localeData[newElement.key] ?? newElement.currentValue;
 
-    setSelected({
-      ...newElement,
-      currentValue: rawValue,
-    });
-    setInputValue(rawValue);
-    setIsSuccess(false);
-    setError(null);
-  }, [hasUnsavedChanges, localeData]);
+      setSelected({
+        ...newElement,
+        currentValue: rawValue,
+      });
+      setInputValue(rawValue);
+      setIsSuccess(false);
+      setError(null);
+    },
+    [hasUnsavedChanges, localeData]
+  );
 
   // Expose trigger actions to handle Confirmation Modal choice
   const confirmDiscard = () => {
@@ -315,8 +325,8 @@ export const useStudio = () => {
 
       // Successful save
       setIsSuccess(true);
-      setSelected((prev) => prev ? { ...prev, currentValue: inputValue } : null);
-      
+      setSelected((prev) => (prev ? { ...prev, currentValue: inputValue } : null));
+
       // Update dictionary state local cache
       setLocaleData((prev) => ({
         ...prev,
@@ -433,7 +443,7 @@ export const useStudio = () => {
       if (!response.ok) {
         throw new Error(result.error || `Server error: ${response.status}`);
       }
-      
+
       const updatedLocales = locales.filter((l) => l !== targetLocale);
       let nextLocale = 'en';
       if (updatedLocales.length > 0) {
@@ -489,4 +499,3 @@ export const useStudio = () => {
     visibleKeys,
   };
 };
-

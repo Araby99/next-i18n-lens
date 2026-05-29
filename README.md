@@ -15,7 +15,7 @@
 
 ## 💡 How It Works: Zero-Width Unicode Watermarking
 
-`next-i18n-lens` bridges your running application UI with your local JSON translation files using **Zero-Width Unicode Watermarking**. 
+`next-i18n-lens` bridges your running application UI with your local JSON translation files using **Zero-Width Unicode Watermarking**.
 
 1. **Watermark Encoding:** In development, when a translation key is looked up, the library prepends an invisible Unicode watermark (using combinations of `\u200D` (ZWJ), `\u200B` (ZWS), and `\u200C` (ZWNJ)) to the text.
 2. **DOM Scanning:** A lightweight dev-only browser listener scans the active DOM, decodes the watermarks, and dynamically hooks visual highlights onto translated elements.
@@ -26,20 +26,21 @@
 
 ## ✨ Features
 
-* 🎯 **In-Context Visual Editing:** Hover over any translated text to highlight it; click to instantly edit in the visual panel.
-* 🔴 **Missing Key Indicators:** Identifies translation keys that are missing in the active locale but exist in the codebase or other translation files, highlighting them with red indicators.
-* 🔄 **Smart Fallback Placeholders:** Automatically renders translation placeholders from alternative languages for missing keys in development, keeping them visible and fully click-to-edit inline.
-* 📁 **Namespaced Folder Support:** Handles nested multi-file folder layouts (e.g., `locales/en/auth.json`) natively, merging files during load and separating them during mutation.
-* 🧼 **Input & Form Sanitization:** Patches controlled inputs and intercepts clipboard actions to strip watermarks in development automatically.
-* ⚡ **Atomic File Operations:** Prevents Next.js hot module replacement (HMR) reading corrupt half-written files via atomic temp-to-final writes.
-* 🔒 **Secure Local Boundaries:** Restricts directory traversal, verifies origins, and supports deep schemas up to 30 levels of recursion.
-* 🤖 **CLI Migration Tool:** Automatically parses and wraps standard `react-i18next` hooks with a single command.
+- 🎯 **In-Context Visual Editing:** Hover over any translated text to highlight it; click to instantly edit in the visual panel.
+- 🔴 **Missing Key Indicators:** Identifies translation keys that are missing in the active locale but exist in the codebase or other translation files, highlighting them with red indicators.
+- 🔄 **Smart Fallback Placeholders:** Automatically renders translation placeholders from alternative languages for missing keys in development, keeping them visible and fully click-to-edit inline.
+- 📁 **Namespaced Folder Support:** Handles nested multi-file folder layouts (e.g., `locales/en/auth.json`) natively, merging files during load and separating them during mutation.
+- 🧼 **Input & Form Sanitization:** Patches controlled inputs and intercepts clipboard actions to strip watermarks in development automatically.
+- ⚡ **Atomic File Operations:** Prevents Next.js hot module replacement (HMR) reading corrupt half-written files via atomic temp-to-final writes.
+- 🔒 **Secure Local Boundaries:** Restricts directory traversal, verifies origins, and supports deep schemas up to 30 levels of recursion.
+- 🤖 **CLI Migration Tool:** Automatically parses and wraps standard `react-i18next` hooks with a single command.
 
 ---
 
 ## ⚡ Quick Setup
 
 ### 1. Install Dependency
+
 ```bash
 npm install next-i18n-lens
 ```
@@ -47,7 +48,9 @@ npm install next-i18n-lens
 ---
 
 ### 2. Add the Client Listener
+
 Mount the `I18nLensProvider` inside your root layout. This launches the dev-mode DOM scanners and intercepts clipboard copy/paste actions.
+
 ```tsx
 // app/layout.tsx
 import { I18nLensProvider } from 'next-i18n-lens/react';
@@ -67,22 +70,26 @@ export default function RootLayout({ children }) {
 ---
 
 ### 3. Initialize Server Mutation Handler
+
 Initialize the server-side API endpoints automatically by running:
+
 ```bash
 npx next-i18n-lens init
 ```
-*The CLI will check for TypeScript/JavaScript and write the appropriate mutation file (`/app/api/i18n-lens/mutate/route.ts` or `/pages/api/i18n-lens/mutate.ts`) directly into your project.*
+
+_The CLI will check for TypeScript/JavaScript and write the appropriate mutation file (`/app/api/i18n-lens/mutate/route.ts` or `/pages/api/i18n-lens/mutate.ts`) directly into your project._
 
 > [!NOTE]
 > For manual setup, create `app/api/i18n-lens/mutate/route.ts` with:
+>
 > ```typescript
 > import { createI18nLensHandler } from 'next-i18n-lens/server';
 > import * as path from 'path';
-> 
+>
 > const handler = createI18nLensHandler({
 >   localesPath: path.resolve('./locales'),
 > });
-> 
+>
 > export const GET = handler;
 > export const POST = handler;
 > export const OPTIONS = handler;
@@ -91,10 +98,13 @@ npx next-i18n-lens init
 ---
 
 ### 4. Enable Key Watermarking
+
 Wrap translation lookups to inject dev-only watermarks.
 
 #### Option A: Server Components (Direct Loader)
+
 Use `createTranslations` to load flat JSON files or directory-based namespaces:
+
 ```tsx
 import { createTranslations } from 'next-i18n-lens/server';
 
@@ -110,7 +120,9 @@ export default async function Page({ searchParams }) {
 ```
 
 #### Option B: Client-side Hooks (react-i18next or next-intl)
+
 Wrap hook return values with `wrapTranslationEngine`:
+
 ```tsx
 'use client';
 import { useTranslation } from 'react-i18next';
@@ -127,10 +139,13 @@ export default function Page() {
 ---
 
 ### 5. Launch the Visual Studio
+
 Boot the editing studio next to your local development server:
+
 ```bash
 npx next-i18n-lens studio --port 3010
 ```
+
 Open `http://localhost:3010` to view the Studio, loaded with your app running at `http://localhost:3000`.
 
 ---
@@ -138,19 +153,25 @@ Open `http://localhost:3010` to view the Studio, loaded with your app running at
 ## 🛠️ CLI Reference
 
 ### `init`
+
 Generates API route handlers based on your router structure (App vs Pages Router) and configuration language (TypeScript vs JavaScript).
+
 ```bash
 npx next-i18n-lens init [--dir <path>]
 ```
 
 ### `studio`
+
 Spins up a lightweight, CORS-enabled HTTP server serving the Visual Studio assets statically.
+
 ```bash
 npx next-i18n-lens studio [--port <number>]
 ```
 
 ### `migrate`
+
 Performs static analysis to scan and automatically wrap existing `react-i18next` hooks with `wrapTranslationEngine`.
+
 ```bash
 npx next-i18n-lens migrate [--dir <path>] [--exclude <dirs>] [--dry-run]
 ```

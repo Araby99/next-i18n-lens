@@ -7,12 +7,16 @@ export interface HandlerConfig {
 
 export function createI18nLensHandler(config: HandlerConfig) {
   const mutator = new FileMutator();
-  const allowedOrigins = config.allowedOrigins || ['http://localhost:3010', 'http://127.0.0.1:3010'];
+  const allowedOrigins = config.allowedOrigins || [
+    'http://localhost:3010',
+    'http://127.0.0.1:3010',
+  ];
 
   return async function i18nLensMutationHandler(request: Request): Promise<Response> {
     const origin = request.headers.get('origin') || '';
     const isLocalhostStudio = /^http:\/\/(localhost|127\.0\.0\.1):301[0-9]$/.test(origin);
-    const allowedOrigin = (allowedOrigins.includes(origin) || isLocalhostStudio) ? origin : (allowedOrigins[0] || '');
+    const allowedOrigin =
+      allowedOrigins.includes(origin) || isLocalhostStudio ? origin : allowedOrigins[0] || '';
 
     // Setup CORS headers to allow cross-origin requests from the Studio
     const corsHeaders: Record<string, string> = {
@@ -110,12 +114,12 @@ export function createI18nLensHandler(config: HandlerConfig) {
             }
           );
         }
-        
+
         try {
           const resolvedBasePath = path.resolve(config.localesPath);
           const localePath = path.resolve(resolvedBasePath, locale);
           const { promises: fs } = await import('fs');
-          
+
           let isDir = false;
           try {
             const stats = await fs.stat(localePath);
@@ -189,7 +193,8 @@ export function createI18nLensHandler(config: HandlerConfig) {
         ) {
           return new Response(
             JSON.stringify({
-              error: 'Invalid locale string. Must be 2-10 characters matching standard code pattern.',
+              error:
+                'Invalid locale string. Must be 2-10 characters matching standard code pattern.',
               code: 'INVALID_LOCALE_FORMAT',
             }),
             {
@@ -259,7 +264,6 @@ export function createI18nLensHandler(config: HandlerConfig) {
         });
       }
 
-
       // RULE SRV-005: REQUEST BODY VALIDATION (with loose regex matching script and region subtags)
       if (
         typeof locale !== 'string' ||
@@ -287,7 +291,8 @@ export function createI18nLensHandler(config: HandlerConfig) {
       ) {
         return new Response(
           JSON.stringify({
-            error: 'Invalid key path. Must be 1-200 characters containing alphanumeric, dots, underscores, or hyphens.',
+            error:
+              'Invalid key path. Must be 1-200 characters containing alphanumeric, dots, underscores, or hyphens.',
             code: 'INVALID_KEY_FORMAT',
           }),
           {

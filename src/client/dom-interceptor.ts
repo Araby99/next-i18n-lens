@@ -23,7 +23,11 @@ function debounce<T extends (...args: any[]) => void>(fn: T, wait: number): T & 
 }
 
 export class DOMInterceptor {
-  private onElementSelected: (payload: { key: string; fallbackValue: string; currentValue: string }) => void;
+  private onElementSelected: (payload: {
+    key: string;
+    fallbackValue: string;
+    currentValue: string;
+  }) => void;
   private onVisibleKeysChanged?: (keys: string[]) => void;
 
   private hoveredElement: HTMLElement | null = null;
@@ -41,7 +45,11 @@ export class DOMInterceptor {
   private broadcastVisibleKeys: (() => void) & { cancel(): void };
 
   constructor(
-    onElementSelected: (payload: { key: string; fallbackValue: string; currentValue: string }) => void,
+    onElementSelected: (payload: {
+      key: string;
+      fallbackValue: string;
+      currentValue: string;
+    }) => void,
     onVisibleKeysChanged?: (keys: string[]) => void
   ) {
     this.onElementSelected = onElementSelected;
@@ -237,7 +245,8 @@ export class DOMInterceptor {
     if (this.isAltHeld) {
       // Alt is held — bright solid border signals "click to edit"
       this.overlay.style.border = '2px solid #3b82f6';
-      this.overlay.style.boxShadow = '0 0 0 1px rgba(59, 130, 246, 0.3), inset 0 0 0 1px rgba(59, 130, 246, 0.1)';
+      this.overlay.style.boxShadow =
+        '0 0 0 1px rgba(59, 130, 246, 0.3), inset 0 0 0 1px rgba(59, 130, 246, 0.1)';
       this.overlayBadge.style.color = '#93c5fd';
       this.overlayBadge.style.borderColor = 'rgba(59, 130, 246, 0.6)';
       this.overlayBadge.textContent = `✎ Click to edit: ${key}`;
@@ -389,9 +398,7 @@ export class DOMInterceptor {
     const form = event.target as HTMLFormElement | null;
     if (!form) return;
 
-    const inputs = form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
-      'input, textarea'
-    );
+    const inputs = form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea');
     inputs.forEach((input) => {
       const cleaned = input.value.replace(ZW_RE, '');
       if (cleaned !== input.value) {
@@ -526,7 +533,11 @@ export class DOMInterceptor {
 
   private handleCopy = (event: ClipboardEvent): void => {
     const selection = window.getSelection()?.toString() || '';
-    if (selection.includes('\u200D') || selection.includes('\u200B') || selection.includes('\u200C')) {
+    if (
+      selection.includes('\u200D') ||
+      selection.includes('\u200B') ||
+      selection.includes('\u200C')
+    ) {
       const clean = selection.replace(ZW_RE, '');
       event.clipboardData?.setData('text/plain', clean);
       event.preventDefault();
@@ -539,10 +550,11 @@ export class DOMInterceptor {
       event.preventDefault();
       const cleaned = text.replace(ZW_RE, '');
       const targetInput = event.target as HTMLInputElement | HTMLTextAreaElement | null;
-      if (targetInput && ('value' in targetInput)) {
-        const proto = targetInput instanceof HTMLTextAreaElement
-          ? HTMLTextAreaElement.prototype
-          : HTMLInputElement.prototype;
+      if (targetInput && 'value' in targetInput) {
+        const proto =
+          targetInput instanceof HTMLTextAreaElement
+            ? HTMLTextAreaElement.prototype
+            : HTMLInputElement.prototype;
         const nativeValueSetter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
 
         if (nativeValueSetter) {

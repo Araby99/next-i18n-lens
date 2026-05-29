@@ -8,11 +8,7 @@ interface IframeViewerProps {
   currentPath: string;
 }
 
-export const IframeViewer = ({
-  iframeRef,
-  appOrigin,
-  connectionStatus,
-}: IframeViewerProps) => {
+export const IframeViewer = ({ iframeRef, appOrigin, connectionStatus }: IframeViewerProps) => {
   const reloadIframe = () => {
     if (iframeRef.current) {
       iframeRef.current.src = iframeRef.current.src;
@@ -35,13 +31,18 @@ export const IframeViewer = ({
         {/* Connection status and actions */}
         <div className="flex items-center gap-4 w-1/3 justify-end">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-semibold tracking-wider text-slate-500 uppercase">Status</span>
-            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${connectionStatus === 'connected'
-              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-              : connectionStatus === 'connecting'
-                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse'
-                : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-              }`}>
+            <span className="text-[10px] font-semibold tracking-wider text-slate-500 uppercase">
+              Status
+            </span>
+            <span
+              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                connectionStatus === 'connected'
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                  : connectionStatus === 'connecting'
+                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse'
+                    : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+              }`}
+            >
               {connectionStatus === 'connected' ? 'ACTIVE' : 'CONNECTING'}
             </span>
           </div>
@@ -84,8 +85,12 @@ export const IframeViewer = ({
               <div className="absolute inset-0 rounded-full border-2 border-t-indigo-500 animate-spin"></div>
             </div>
             <div className="text-center">
-              <h3 className="text-slate-200 font-semibold tracking-wide font-outfit">Connecting to Project</h3>
-              <p className="text-xs text-slate-500 mt-1 font-mono">Waiting for client bridge initialization...</p>
+              <h3 className="text-slate-200 font-semibold tracking-wide font-outfit">
+                Connecting to Project
+              </h3>
+              <p className="text-xs text-slate-500 mt-1 font-mono">
+                Waiting for client bridge initialization...
+              </p>
             </div>
           </div>
         )}

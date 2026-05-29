@@ -47,14 +47,8 @@ export interface WrapOptions {
  * <h1>{t('title')}</h1>
  * ```
  */
-export function wrapTranslationEngine<T extends object>(
-  engine: T,
-  options: WrapOptions = {}
-): T {
-  if (
-    typeof process !== 'undefined' &&
-    process.env.NODE_ENV !== 'development'
-  ) {
+export function wrapTranslationEngine<T extends object>(engine: T, options: WrapOptions = {}): T {
+  if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'development') {
     return engine;
   }
 
@@ -77,11 +71,7 @@ function getNestedProperty(obj: any, path: string): any {
   return current;
 }
 
-function buildProxy<T extends object>(
-  target: T,
-  keyPrefix: string,
-  options: WrapOptions
-): T {
+function buildProxy<T extends object>(target: T, keyPrefix: string, options: WrapOptions): T {
   return new Proxy(target, {
     get(obj, prop: string | symbol) {
       if (typeof prop !== 'string') {
@@ -95,7 +85,9 @@ function buildProxy<T extends object>(
       const fullKey = keyPrefix ? `${keyPrefix}.${prop}` : prop;
 
       // If val is missing, try looking it up in fallback
-      const fallbackObj = options.fallback ?? (typeof window !== 'undefined' ? (window as any).__i18n_lens_fallback__ : undefined);
+      const fallbackObj =
+        options.fallback ??
+        (typeof window !== 'undefined' ? (window as any).__i18n_lens_fallback__ : undefined);
       if (val === undefined && fallbackObj) {
         const fbVal = getNestedProperty(fallbackObj, fullKey);
         if (fbVal !== undefined) {
@@ -111,7 +103,7 @@ function buildProxy<T extends object>(
       // Function (e.g. t() from next-intl) – wrap the call result
       if (typeof val === 'function') {
         return (...args: unknown[]) => {
-          const result = (val as Function).apply(obj, args);
+          const result = (val as (...args: unknown[]) => unknown).apply(obj, args);
           const calledKey =
             typeof args[0] === 'string'
               ? keyPrefix
@@ -153,13 +145,11 @@ function buildProxy<T extends object>(
     apply(target: any, thisArg, args: unknown[]) {
       const result = Reflect.apply(target, thisArg, args);
       const calledKey =
-        typeof args[0] === 'string'
-          ? keyPrefix
-            ? `${keyPrefix}.${args[0]}`
-            : args[0]
-          : keyPrefix;
+        typeof args[0] === 'string' ? (keyPrefix ? `${keyPrefix}.${args[0]}` : args[0]) : keyPrefix;
 
-      const fallbackObj = options.fallback ?? (typeof window !== 'undefined' ? (window as any).__i18n_lens_fallback__ : undefined);
+      const fallbackObj =
+        options.fallback ??
+        (typeof window !== 'undefined' ? (window as any).__i18n_lens_fallback__ : undefined);
       let resolvedValue = result;
       const isMissing =
         resolvedValue === undefined ||

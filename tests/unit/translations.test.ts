@@ -56,7 +56,9 @@ describe('createTranslations', () => {
 
   it('should fall back to safe locale flat file if directory readdir fails', () => {
     vi.mocked(fs.statSync).mockReturnValue({ isDirectory: () => true } as any);
-    vi.mocked(fs.readdirSync).mockImplementation(() => { throw new Error('readdir error'); });
+    vi.mocked(fs.readdirSync).mockImplementation(() => {
+      throw new Error('readdir error');
+    });
     vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({ fallback: 'yes' }));
 
     const t = createTranslations('en', {

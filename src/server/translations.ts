@@ -117,10 +117,7 @@ export function createTranslations(
   }
 
   let fallbackData: Record<string, any> = {};
-  if (
-    typeof process !== 'undefined' &&
-    process.env.NODE_ENV === 'development'
-  ) {
+  if (typeof process !== 'undefined' && process.env.NODE_ENV === 'development') {
     try {
       const entries = readdirSync(localesDir);
       if (Array.isArray(entries)) {

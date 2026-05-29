@@ -48,7 +48,9 @@ export function Component() {
     const result = transformReactI18next(code, 'component.tsx');
     expect(result.modified).toBe(true);
     expect(result.code).toContain("const { t: rawMyT } = useTranslation('common');");
-    expect(result.code).toContain("const myT = wrapTranslationEngine(rawMyT, { keyPrefix: 'common' });");
+    expect(result.code).toContain(
+      "const myT = wrapTranslationEngine(rawMyT, { keyPrefix: 'common' });"
+    );
   });
 
   it('should handle Array Destructuring', () => {
@@ -60,7 +62,9 @@ export function Component() {
     const result = transformReactI18next(code, 'component.tsx');
     expect(result.modified).toBe(true);
     expect(result.code).toContain("const [rawT] = useTranslation('dashboard');");
-    expect(result.code).toContain("const t = wrapTranslationEngine(rawT, { keyPrefix: 'dashboard' });");
+    expect(result.code).toContain(
+      "const t = wrapTranslationEngine(rawT, { keyPrefix: 'dashboard' });"
+    );
   });
 
   it('should handle Array Destructuring with other variables', () => {
@@ -72,7 +76,9 @@ export function Component() {
     const result = transformReactI18next(code, 'component.tsx');
     expect(result.modified).toBe(true);
     expect(result.code).toContain("const [rawT, i18nInstance] = useTranslation('dashboard');");
-    expect(result.code).toContain("const t = wrapTranslationEngine(rawT, { keyPrefix: 'dashboard' });");
+    expect(result.code).toContain(
+      "const t = wrapTranslationEngine(rawT, { keyPrefix: 'dashboard' });"
+    );
   });
 
   it('should handle Simple Assignment (no destructuring)', () => {
@@ -84,7 +90,9 @@ export function Component() {
     const result = transformReactI18next(code, 'component.tsx');
     expect(result.modified).toBe(true);
     expect(result.code).toContain("const rawTranslation = useTranslation('footer');");
-    expect(result.code).toContain("const translation = { ...rawTranslation, t: wrapTranslationEngine(rawTranslation.t, { keyPrefix: 'footer' }) };");
+    expect(result.code).toContain(
+      "const translation = { ...rawTranslation, t: wrapTranslationEngine(rawTranslation.t, { keyPrefix: 'footer' }) };"
+    );
   });
 
   it('should handle no namespace arguments', () => {
@@ -95,8 +103,8 @@ export function Component() {
 }`;
     const result = transformReactI18next(code, 'component.tsx');
     expect(result.modified).toBe(true);
-    expect(result.code).toContain("const { t: rawT } = useTranslation();");
-    expect(result.code).toContain("const t = wrapTranslationEngine(rawT);");
+    expect(result.code).toContain('const { t: rawT } = useTranslation();');
+    expect(result.code).toContain('const t = wrapTranslationEngine(rawT);');
   });
 
   it('should handle array namespaces and use the first elements prefix', () => {
@@ -119,8 +127,10 @@ export function Component(props: { ns: string }) {
 }`;
     const result = transformReactI18next(code, 'component.tsx');
     expect(result.modified).toBe(true);
-    expect(result.code).toContain("const { t: rawT } = useTranslation(props.ns);");
-    expect(result.code).toContain("const t = wrapTranslationEngine(rawT, { keyPrefix: props.ns });");
+    expect(result.code).toContain('const { t: rawT } = useTranslation(props.ns);');
+    expect(result.code).toContain(
+      'const t = wrapTranslationEngine(rawT, { keyPrefix: props.ns });'
+    );
   });
 
   it('should preserve use client directive at the top when inserting import', () => {
@@ -157,7 +167,9 @@ export function Component() {
 }`;
     const result = transformReactI18next(code, 'component.tsx');
     expect(result.modified).toBe(true);
-    expect(result.code).toContain("      const { t: rawT } = useTranslation('home');\n      const t = wrapTranslationEngine(rawT, { keyPrefix: 'home' });");
+    expect(result.code).toContain(
+      "      const { t: rawT } = useTranslation('home');\n      const t = wrapTranslationEngine(rawT, { keyPrefix: 'home' });"
+    );
   });
 
   it('should not duplicate imports or wrap if already wrapped/imported', () => {

@@ -156,7 +156,7 @@ describe('createI18nLensHandler', () => {
     const request = new Request('http://localhost:3000/api/mutate', {
       method: 'OPTIONS',
       headers: {
-        'Origin': 'http://localhost:3010',
+        Origin: 'http://localhost:3010',
       },
     });
 
@@ -181,7 +181,7 @@ describe('createI18nLensHandler', () => {
 
   it('should accept valid regional, script, and three-letter codes under loose regex validation', async () => {
     const handler = createI18nLensHandler(config);
-    
+
     const validLocales = ['es-419', 'zh-Hans', 'zh-Hant', 'en-US', 'ar-EG', 'eng', 'ar'];
     for (const loc of validLocales) {
       const request = new Request('http://localhost:3000/api/mutate', {
@@ -217,7 +217,7 @@ describe('createI18nLensHandler', () => {
     vi.mocked(fs.readdir).mockResolvedValue(['common.json' as any, 'auth.json' as any]);
     vi.mocked(fs.readFile)
       .mockResolvedValueOnce(JSON.stringify({ title: 'Welcome' })) // common.json
-      .mockResolvedValueOnce(JSON.stringify({ login: 'Log In' }));  // auth.json
+      .mockResolvedValueOnce(JSON.stringify({ login: 'Log In' })); // auth.json
 
     const request = new Request('http://localhost:3000/api/mutate?locale=en', {
       method: 'GET',

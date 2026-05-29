@@ -14,13 +14,13 @@ function createMockReq(
   readBody: () => Promise<void>;
 } {
   const bodyStr = body ? JSON.stringify(body) : '';
-  const listeners: Record<string, Function[]> = {};
+  const listeners: Record<string, ((...args: any[]) => any)[]> = {};
 
   const req = {
     method,
     url,
     headers: { origin: 'http://localhost:3010' },
-    on(event: string, cb: Function) {
+    on(event: string, cb: (...args: any[]) => any) {
       if (!listeners[event]) listeners[event] = [];
       listeners[event].push(cb);
     },
@@ -43,16 +43,34 @@ function createMockRes() {
 
   return {
     res: {
-      setHeader(k: string, v: string) { headers[k] = v; },
-      get statusCode() { return statusCode; },
-      set statusCode(code: number) { statusCode = code; },
-      end(data: string) { body = data; },
+      setHeader(k: string, v: string) {
+        headers[k] = v;
+      },
+      get statusCode() {
+        return statusCode;
+      },
+      set statusCode(code: number) {
+        statusCode = code;
+      },
+      end(data: string) {
+        body = data;
+      },
     },
-    get headers() { return headers; },
-    get statusCode() { return statusCode; },
-    get body() { return body; },
+    get headers() {
+      return headers;
+    },
+    get statusCode() {
+      return statusCode;
+    },
+    get body() {
+      return body;
+    },
     get parsedBody() {
-      try { return JSON.parse(body); } catch { return null; }
+      try {
+        return JSON.parse(body);
+      } catch {
+        return null;
+      }
     },
   };
 }
@@ -67,11 +85,20 @@ describe('i18nLensVite plugin', () => {
 
     // Create a temp directory with a flat locale file
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'i18n-lens-vite-test-'));
-    fs.writeFileSync(path.join(tmpDir, 'en.json'), JSON.stringify({ greeting: 'Hello', farewell: 'Goodbye' }));
+    fs.writeFileSync(
+      path.join(tmpDir, 'en.json'),
+      JSON.stringify({ greeting: 'Hello', farewell: 'Goodbye' })
+    );
 
     // Instantiate the plugin and grab the middleware
     plugin = i18nLensVite({ localesPath: tmpDir });
-    const server = { middlewares: { use: (mw: any) => { middleware = mw; } } };
+    const server = {
+      middlewares: {
+        use: (mw: any) => {
+          middleware = mw;
+        },
+      },
+    };
     (plugin as any).configureServer(server);
   });
 
@@ -292,7 +319,10 @@ describe('i18nLensVite plugin', () => {
   // ─── transformIndexHtml ──────────────────────────────────────────────────
 
   it('should inject merged fallback translations in development mode', () => {
-    fs.writeFileSync(path.join(tmpDir, 'es.json'), JSON.stringify({ greeting: 'Hola', page: { title: 'Título' } }));
+    fs.writeFileSync(
+      path.join(tmpDir, 'es.json'),
+      JSON.stringify({ greeting: 'Hola', page: { title: 'Título' } })
+    );
 
     const html = '<html><head><title>Test</title></head><body></body></html>';
     const result = (plugin as any).transformIndexHtml(html);

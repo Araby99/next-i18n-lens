@@ -14,7 +14,6 @@ const getDirname = () => {
   }
 };
 
-
 function printHelp() {
   console.log(`
 next-i18n-lens CLI
@@ -46,7 +45,7 @@ Global Options:
 function runStudio(projectDir: string, port: number) {
   console.log(`\n🚀 Starting next-i18n-lens Visual Studio...`);
   const studioDir = path.resolve(getDirname(), '../studio');
-  
+
   if (!fs.existsSync(studioDir)) {
     console.error(`Error: Studio directory not found at "${studioDir}".`);
     console.error(`Did you build the project? Run "npm run build" first.`);
@@ -107,7 +106,6 @@ function runStudio(projectDir: string, port: number) {
     console.log(`💡 Press Ctrl+C to stop the studio server.\n`);
   });
 }
-
 
 function runInit(projectDir: string) {
   console.log(`\n🚀 Initializing next-i18n-lens API handler...`);
@@ -197,7 +195,7 @@ export default handler;
 
 function run() {
   const args = process.argv.slice(2);
-  
+
   if (args.includes('--help') || args.includes('-h') || args[0] === 'help') {
     printHelp();
     process.exit(0);
@@ -248,7 +246,7 @@ function run() {
     } else if (arg === '--exclude') {
       const val = args[++i];
       if (val) {
-        excludes = val.split(',').map(s => s.trim());
+        excludes = val.split(',').map((s) => s.trim());
       }
     } else if (arg === '--dry-run') {
       dryRun = true;

@@ -107,9 +107,9 @@ describe('FileMutator', () => {
 
   it('should throw when running inside non-development environment', async () => {
     vi.stubEnv('NODE_ENV', 'production');
-    await expect(
-      mutator.updateLocaleKey(BASE_PATH, 'en', 'greeting', 'Hi')
-    ).rejects.toThrow(/development/i);
+    await expect(mutator.updateLocaleKey(BASE_PATH, 'en', 'greeting', 'Hi')).rejects.toThrow(
+      /development/i
+    );
   });
 
   it('should throw when locale string contains path traversal characters', async () => {
@@ -117,31 +117,31 @@ describe('FileMutator', () => {
       mutator.updateLocaleKey(BASE_PATH, '../etc/passwd', 'key', 'value')
     ).rejects.toThrow(/path traversal/i);
 
-    await expect(
-      mutator.updateLocaleKey(BASE_PATH, 'sub/folder', 'key', 'value')
-    ).rejects.toThrow(/path traversal/i);
+    await expect(mutator.updateLocaleKey(BASE_PATH, 'sub/folder', 'key', 'value')).rejects.toThrow(
+      /path traversal/i
+    );
   });
 
   it('should throw when key depth exceeds 30 levels', async () => {
     vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify({}));
     const deepKey = Array(31).fill('a').join('.'); // 31 segments
-    await expect(
-      mutator.updateLocaleKey(BASE_PATH, 'en', deepKey, 'value')
-    ).rejects.toThrow(/key depth/i);
+    await expect(mutator.updateLocaleKey(BASE_PATH, 'en', deepKey, 'value')).rejects.toThrow(
+      /key depth/i
+    );
   });
 
   it('should throw when locale file content is invalid JSON', async () => {
     vi.mocked(fs.readFile).mockResolvedValue('{ not valid json }');
-    await expect(
-      mutator.updateLocaleKey(BASE_PATH, 'en', 'greeting', 'Hi')
-    ).rejects.toThrow(/invalid locale file/i);
+    await expect(mutator.updateLocaleKey(BASE_PATH, 'en', 'greeting', 'Hi')).rejects.toThrow(
+      /invalid locale file/i
+    );
   });
 
   it('should throw when locale file parses to an array root', async () => {
     vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(['item1', 'item2']));
-    await expect(
-      mutator.updateLocaleKey(BASE_PATH, 'en', 'greeting', 'Hi')
-    ).rejects.toThrow(/must be an object/i);
+    await expect(mutator.updateLocaleKey(BASE_PATH, 'en', 'greeting', 'Hi')).rejects.toThrow(
+      /must be an object/i
+    );
   });
 
   it('should throw when file reading fails with non-ENOENT code', async () => {
@@ -149,9 +149,9 @@ describe('FileMutator', () => {
     error.code = 'EACCES';
     vi.mocked(fs.readFile).mockRejectedValue(error);
 
-    await expect(
-      mutator.updateLocaleKey(BASE_PATH, 'en', 'greeting', 'Hi')
-    ).rejects.toThrow(/failed to read/i);
+    await expect(mutator.updateLocaleKey(BASE_PATH, 'en', 'greeting', 'Hi')).rejects.toThrow(
+      /failed to read/i
+    );
   });
 
   it('should clean up .tmp file when file renaming fails', async () => {
@@ -160,20 +160,18 @@ describe('FileMutator', () => {
     vi.mocked(fs.rename).mockRejectedValue(new Error('disk full'));
     vi.mocked(fs.unlink).mockResolvedValue(undefined);
 
-    await expect(
-      mutator.updateLocaleKey(BASE_PATH, 'en', 'k', 'new')
-    ).rejects.toThrow('disk full');
+    await expect(mutator.updateLocaleKey(BASE_PATH, 'en', 'k', 'new')).rejects.toThrow('disk full');
 
     expect(fs.unlink).toHaveBeenCalledWith(expect.stringContaining('en.json.tmp'));
   });
 
   it('should serialise concurrent updates to the same locale file path', async () => {
     const callOrder: number[] = [];
-    
+
     vi.mocked(fs.readFile)
       .mockImplementationOnce(async () => {
         // First call takes longer to simulate disk operation delay
-        await new Promise(resolve => setTimeout(resolve, 20));
+        await new Promise((resolve) => setTimeout(resolve, 20));
         callOrder.push(1);
         return JSON.stringify({ count: 0 });
       })
@@ -240,11 +238,7 @@ describe('FileMutator', () => {
 
       await mutator.addLocale(BASE_PATH, 'fr');
 
-      expect(fs.writeFile).toHaveBeenCalledWith(
-        expect.stringContaining('fr.json'),
-        '{}',
-        'utf-8'
-      );
+      expect(fs.writeFile).toHaveBeenCalledWith(expect.stringContaining('fr.json'), '{}', 'utf-8');
     });
 
     it('should create folder-based layout with empty namespace files when references exist', async () => {
@@ -252,21 +246,16 @@ describe('FileMutator', () => {
       // Simulate existing "en" directory and standard namespace files
       vi.mocked(fs.readdir)
         .mockResolvedValueOnce([
-          { name: 'en', isDirectory: () => true, isFile: () => false } as any
+          { name: 'en', isDirectory: () => true, isFile: () => false } as any,
         ] as any)
-        .mockResolvedValueOnce([
-          'common.json', 'auth.json'
-        ] as any);
+        .mockResolvedValueOnce(['common.json', 'auth.json'] as any);
 
       vi.mocked(fs.mkdir).mockResolvedValue(undefined);
       vi.mocked(fs.writeFile).mockResolvedValue(undefined);
 
       await mutator.addLocale(BASE_PATH, 'es');
 
-      expect(fs.mkdir).toHaveBeenCalledWith(
-        expect.stringContaining('es'),
-        { recursive: true }
-      );
+      expect(fs.mkdir).toHaveBeenCalledWith(expect.stringContaining('es'), { recursive: true });
       expect(fs.writeFile).toHaveBeenCalledWith(
         expect.stringContaining(path.join('es', 'common.json')),
         '{}',
@@ -282,9 +271,7 @@ describe('FileMutator', () => {
     it('should throw error if locale already exists', async () => {
       vi.mocked(fs.stat).mockResolvedValue({} as any);
 
-      await expect(
-        mutator.addLocale(BASE_PATH, 'en')
-      ).rejects.toThrow(/already exists/i);
+      await expect(mutator.addLocale(BASE_PATH, 'en')).rejects.toThrow(/already exists/i);
     });
   });
 
@@ -340,10 +327,10 @@ describe('FileMutator', () => {
 
       await mutator.deleteLocale(BASE_PATH, 'fr');
 
-      expect(fs.rm).toHaveBeenCalledWith(
-        expect.stringContaining('fr'),
-        { recursive: true, force: true }
-      );
+      expect(fs.rm).toHaveBeenCalledWith(expect.stringContaining('fr'), {
+        recursive: true,
+        force: true,
+      });
     });
 
     it('should unlink file when locale is a file', async () => {
@@ -354,9 +341,7 @@ describe('FileMutator', () => {
 
       await mutator.deleteLocale(BASE_PATH, 'es');
 
-      expect(fs.unlink).toHaveBeenCalledWith(
-        expect.stringContaining('es.json')
-      );
+      expect(fs.unlink).toHaveBeenCalledWith(expect.stringContaining('es.json'));
     });
   });
 
@@ -400,10 +385,7 @@ describe('FileMutator', () => {
         .mockResolvedValueOnce(JSON.stringify({ home: { title: 'Marhaban' } })); // ar.json
 
       const keys = await mutator.scanLocalesKeys(BASE_PATH);
-      expect(keys).toEqual([
-        'home.desc',
-        'home.title',
-      ]);
+      expect(keys).toEqual(['home.desc', 'home.title']);
     });
   });
 });

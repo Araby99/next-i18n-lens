@@ -7,7 +7,10 @@ class FileMutex {
   async acquire<T>(fn: () => Promise<T>): Promise<T> {
     const next = this.queue.then(fn);
     // Suppress errors on the main queue chain to prevent locking up the mutex
-    this.queue = next.then(() => {}, () => {});
+    this.queue = next.then(
+      () => {},
+      () => {}
+    );
     return next;
   }
 }
@@ -52,12 +55,14 @@ export class FileMutator {
       locale.includes('%') ||
       locale.includes('\0')
     ) {
-      throw new Error(`[i18n-lens] Path traversal attempt detected in locale identifier: "${locale}"`);
+      throw new Error(
+        `[i18n-lens] Path traversal attempt detected in locale identifier: "${locale}"`
+      );
     }
 
     const resolvedBasePath = path.resolve(basePath);
     const localeDir = path.resolve(resolvedBasePath, locale);
-    
+
     let filePath = '';
     let mutationKeyPath = keyPath;
     let isNamespaceDir = false;
@@ -84,7 +89,9 @@ export class FileMutator {
     }
 
     if (!filePath.startsWith(resolvedBasePath)) {
-      throw new Error(`[i18n-lens] Path traversal attempt: Resolved file path must start with basePath.`);
+      throw new Error(
+        `[i18n-lens] Path traversal attempt: Resolved file path must start with basePath.`
+      );
     }
 
     // Perform atomic operation within a file lock to guarantee concurrency safety (RULE SRV-006)
@@ -95,7 +102,7 @@ export class FileMutator {
         const fileContent = await fs.readFile(filePath, 'utf-8');
         try {
           const parsed = JSON.parse(fileContent);
-          
+
           // RULE SRV-004: JSON PARSE VALIDATION
           if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
             throw new Error('Root must be an object');
@@ -120,7 +127,9 @@ export class FileMutator {
         this.setNestedProperty(currentData, mutationKeyPath, newValue);
       } else {
         // Root value mutation inside split JSON files (rare but possible: e.g. key has no dot)
-        throw new Error('[i18n-lens] Invalid namespace key path: must contain at least one nested key.');
+        throw new Error(
+          '[i18n-lens] Invalid namespace key path: must contain at least one nested key.'
+        );
       }
 
       // RULE SEC-004: VALIDATE JSON BEFORE WRITE
@@ -169,7 +178,7 @@ export class FileMutator {
    */
   private setNestedProperty(obj: Record<string, any>, keyPath: string, value: string): void {
     const keys = keyPath.split('.');
-    
+
     // RULE SRV-003: KEY DEPTH LIMIT
     if (keys.length > 30) {
       throw new Error(`[i18n-lens] Key depth limit exceeded. Maximum depth is 30 levels.`);
@@ -186,7 +195,12 @@ export class FileMutator {
       }
 
       // Handle intermediate object mapping
-      if (!(key in current) || current[key] === null || typeof current[key] !== 'object' || Array.isArray(current[key])) {
+      if (
+        !(key in current) ||
+        current[key] === null ||
+        typeof current[key] !== 'object' ||
+        Array.isArray(current[key])
+      ) {
         current[key] = {};
       }
 
@@ -238,7 +252,9 @@ export class FileMutator {
       locale.includes('%') ||
       locale.includes('\0')
     ) {
-      throw new Error(`[i18n-lens] Path traversal attempt detected in locale identifier: "${locale}"`);
+      throw new Error(
+        `[i18n-lens] Path traversal attempt detected in locale identifier: "${locale}"`
+      );
     }
 
     const LOCALE_RE = /^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,4})?$/;
@@ -250,7 +266,9 @@ export class FileMutator {
     const localePath = path.resolve(resolvedBasePath, locale);
 
     if (!localePath.startsWith(resolvedBasePath)) {
-      throw new Error(`[i18n-lens] Path traversal attempt: Resolved file path must start with basePath.`);
+      throw new Error(
+        `[i18n-lens] Path traversal attempt: Resolved file path must start with basePath.`
+      );
     }
 
     // Check if directory or file already exists
@@ -307,8 +325,16 @@ export class FileMutator {
     }
 
     if (
-      oldLocale.includes('..') || oldLocale.includes('/') || oldLocale.includes('\\') || oldLocale.includes('%') || oldLocale.includes('\0') ||
-      newLocale.includes('..') || newLocale.includes('/') || newLocale.includes('\\') || newLocale.includes('%') || newLocale.includes('\0')
+      oldLocale.includes('..') ||
+      oldLocale.includes('/') ||
+      oldLocale.includes('\\') ||
+      oldLocale.includes('%') ||
+      oldLocale.includes('\0') ||
+      newLocale.includes('..') ||
+      newLocale.includes('/') ||
+      newLocale.includes('\\') ||
+      newLocale.includes('%') ||
+      newLocale.includes('\0')
     ) {
       throw new Error('[i18n-lens] Path traversal attempt detected');
     }
@@ -507,8 +533,11 @@ export class FileMutator {
               while ((propMatch = PROP_RE.exec(content)) !== null) {
                 const rawMatch = propMatch[0];
                 const clean = rawMatch.replace(/\bt/, '').replace(/\?/g, '');
-                const segments = clean.split('.').map(s => s.trim()).filter(Boolean);
-                if (segments.length > 0 && !segments.some(s => IGNORE_PROPS.has(s))) {
+                const segments = clean
+                  .split('.')
+                  .map((s) => s.trim())
+                  .filter(Boolean);
+                if (segments.length > 0 && !segments.some((s) => IGNORE_PROPS.has(s))) {
                   keysSet.add(segments.join('.'));
                 }
               }
@@ -610,4 +639,3 @@ export class FileMutator {
     };
   }
 }
-

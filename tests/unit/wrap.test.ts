@@ -80,7 +80,7 @@ describe('wrapTranslationEngine', () => {
   it('should fallback to window.__i18n_lens_fallback__ if defined and options.fallback is missing', () => {
     const originalWindow = (globalThis as any).window;
     (globalThis as any).window = {
-      __i18n_lens_fallback__: { welcome: 'Global Hi', title: 'Global Title' }
+      __i18n_lens_fallback__: { welcome: 'Global Hi', title: 'Global Title' },
     };
 
     try {
