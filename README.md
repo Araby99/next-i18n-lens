@@ -159,86 +159,20 @@ npx next-i18n-lens migrate [--dir <path>] [--exclude <dirs>] [--dry-run]
 
 ## ⚙️ Non-Next.js Integration (React + Vite SPA)
 
-If you are using a standard React Client-Side SPA (like Vite), you don't have Next.js API endpoints. You can use a custom Vite plugin inside `vite.config.ts` to capture mutation endpoints:
+If you are using a standard React Client-Side SPA (like Vite), you don't have Next.js API endpoints. You can use the built-in Vite plugin inside `vite.config.ts` to automatically capture the mutation endpoints:
 
 ```typescript
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { FileMutator } from 'next-i18n-lens/server';
-import * as path from 'path';
-import * as fs from 'fs';
+import { i18nLensVite } from 'next-i18n-lens/vite';
 
 export default defineConfig({
   plugins: [
     react(),
-    {
-      name: 'vite-plugin-i18n-lens',
-      configureServer(server) {
-        const mutator = new FileMutator();
-        
-        server.middlewares.use(async (req, res, next) => {
-          if (req.url?.startsWith('/api/i18n-lens/mutate')) {
-            const urlObj = new URL(req.url, 'http://localhost');
-            
-            res.setHeader('Access-Control-Allow-Origin', '*');
-            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-            res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-            if (req.method === 'OPTIONS') {
-              res.statusCode = 204;
-              res.end();
-              return;
-            }
-
-            if (req.method === 'GET') {
-              const locale = urlObj.searchParams.get('locale');
-              const localesDir = path.resolve('./locales');
-              const target = path.join(localesDir, locale || 'en');
-              
-              res.setHeader('Content-Type', 'application/json');
-              try {
-                const isDir = fs.statSync(target).isDirectory();
-                if (isDir) {
-                  const data: Record<string, any> = {};
-                  const files = fs.readdirSync(target);
-                  for (const file of files) {
-                    if (file.endsWith('.json')) {
-                      const ns = file.slice(0, -5);
-                      data[ns] = JSON.parse(fs.readFileSync(path.join(target, file), 'utf-8'));
-                    }
-                  }
-                  res.end(JSON.stringify(data));
-                } else {
-                  res.end(fs.readFileSync(`${target}.json`, 'utf-8'));
-                }
-              } catch {
-                res.end(fs.readFileSync(path.join(localesDir, 'en.json'), 'utf-8'));
-              }
-              return;
-            }
-
-            if (req.method === 'POST') {
-              let body = '';
-              req.on('data', chunk => { body += chunk; });
-              req.on('end', async () => {
-                try {
-                  const { locale, key, value } = JSON.parse(body);
-                  await mutator.updateLocaleKey(path.resolve('./locales'), locale, key, value);
-                  res.setHeader('Content-Type', 'application/json');
-                  res.end(JSON.stringify({ success: true }));
-                } catch (err: any) {
-                  res.statusCode = 500;
-                  res.end(JSON.stringify({ error: err.message }));
-                }
-              });
-              return;
-            }
-          }
-          next();
-        });
-      }
-    }
-  ]
+    i18nLensVite({
+      localesPath: './locales', // path to your locales directory
+    }),
+  ],
 });
 ```
 
