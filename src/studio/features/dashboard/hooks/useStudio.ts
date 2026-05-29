@@ -31,6 +31,11 @@ export const useStudio = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentPath, setCurrentPath] = useState<string>('/');
 
+  // Dynamic locales list state
+  const [locales, setLocales] = useState<string[]>([]);
+  const [allKeys, setAllKeys] = useState<string[]>([]);
+  const [codeKeys, setCodeKeys] = useState<string[]>([]);
+
   // Phase 2: Full locale keys searchable state
   const [localeData, setLocaleData] = useState<Record<string, string>>({});
   const [enLocaleData, setEnLocaleData] = useState<Record<string, string>>({});
@@ -38,6 +43,7 @@ export const useStudio = () => {
 
   // Feature 2: Active page key filtering — null means "show all"
   const [visibleKeys, setVisibleKeys] = useState<string[] | null>(null);
+  const [filterPageOnly, setFilterPageOnly] = useState<boolean>(false);
 
   // Custom Confirmation Modal States (Keeping hook UI-agnostic)
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
@@ -47,6 +53,44 @@ export const useStudio = () => {
 
   // Check if there are unsaved changes
   const hasUnsavedChanges = selected !== null && inputValue !== selected.currentValue;
+
+  // Fetch locales list dynamically from the server
+  const fetchLocales = useCallback(async (selectDefault?: boolean) => {
+    try {
+      const response = await fetch(`${APP_ORIGIN}/api/i18n-lens/mutate`);
+      if (!response.ok) {
+        throw new Error(`Failed to load locales: ${response.statusText}`);
+      }
+      const list = await response.json();
+      if (Array.isArray(list)) {
+        setLocales(list);
+        if (selectDefault && list.length > 0) {
+          setLocale(prev => list.includes(prev) ? prev : (list.includes('en') ? 'en' : list[0] || 'en'));
+        }
+      }
+    } catch (err: any) {
+      console.warn('[i18n-lens] Failed to fetch locales list:', err.message);
+    }
+  }, []);
+
+  // Fetch all keys from locales and codebase
+  const fetchKeysMetadata = useCallback(async () => {
+    try {
+      const response = await fetch(`${APP_ORIGIN}/api/i18n-lens/mutate?action=keys`);
+      if (!response.ok) {
+        throw new Error(`Failed to load keys metadata: ${response.statusText}`);
+      }
+      const data = await response.json();
+      if (data && Array.isArray(data.allKeys)) {
+        setAllKeys(data.allKeys);
+      }
+      if (data && Array.isArray(data.codeKeys)) {
+        setCodeKeys(data.codeKeys);
+      }
+    } catch (err: any) {
+      console.warn('[i18n-lens] Failed to fetch keys metadata:', err.message);
+    }
+  }, []);
 
   // Fetch full dictionary for active locale (Phase 2)
   const fetchLocaleData = useCallback(async (targetLocale: string) => {
@@ -63,9 +107,16 @@ export const useStudio = () => {
     }
   }, []);
 
-  // Fetch locale data when connection is successful or when locale changes
+  // Fetch locales and then fetch dictionary when connection is successful or when locale changes
   useEffect(() => {
     if (connectionStatus === 'connected') {
+      fetchLocales(true);
+      fetchKeysMetadata();
+    }
+  }, [connectionStatus, fetchLocales, fetchKeysMetadata]);
+
+  useEffect(() => {
+    if (connectionStatus === 'connected' && locale) {
       fetchLocaleData(locale);
     }
   }, [connectionStatus, locale, fetchLocaleData]);
@@ -117,6 +168,7 @@ export const useStudio = () => {
     }
   };
 
+
   // Helper to send message to iframe
   const sendToIframe = useCallback((type: string, payload?: any) => {
     if (iframeRef.current && iframeRef.current.contentWindow) {
@@ -141,7 +193,7 @@ export const useStudio = () => {
       return;
     }
 
-    const rawValue = localeData[newElement.key] !== undefined ? localeData[newElement.key] : newElement.currentValue;
+    const rawValue = localeData[newElement.key] ?? newElement.currentValue;
 
     setSelected({
       ...newElement,
@@ -155,7 +207,7 @@ export const useStudio = () => {
   // Expose trigger actions to handle Confirmation Modal choice
   const confirmDiscard = () => {
     if (pendingElement) {
-      const rawValue = localeData[pendingElement.key] !== undefined ? localeData[pendingElement.key] : pendingElement.currentValue;
+      const rawValue = localeData[pendingElement.key] ?? pendingElement.currentValue;
       setSelected({
         ...pendingElement,
         currentValue: rawValue,
@@ -271,6 +323,9 @@ export const useStudio = () => {
         [selected.key]: inputValue,
       }));
 
+      // Refresh list of all keys in case a new key was saved/created
+      fetchKeysMetadata();
+
       // Send indicator update back to client to clear selection highlight
       sendToIframe('CLEAR_SELECTION');
 
@@ -293,9 +348,9 @@ export const useStudio = () => {
 
   // Filter dictionary keys based on search input (Phase 2)
   // Also filter by visible page keys (Feature 2) when the iframe has reported them.
-  const filteredKeys = Object.keys(localeData).filter((key) => {
+  const filteredKeys = allKeys.filter((key) => {
     // Contextual filter: only show keys present on the current page
-    if (visibleKeys !== null && !visibleKeys.includes(key)) {
+    if (filterPageOnly && visibleKeys !== null && !visibleKeys.includes(key)) {
       return false;
     }
     const val = localeData[key] || '';
@@ -305,14 +360,99 @@ export const useStudio = () => {
     );
   });
 
-  // Feature 3: Translation coverage — percentage of enLocaleData keys that have
+  // Feature 3: Translation coverage — percentage of all project keys that have
   // a non-empty value in the current locale.
-  const totalKeys = Object.keys(enLocaleData).length;
-  const translatedKeys = Object.keys(enLocaleData).filter((key) => {
+  const totalKeys = allKeys.length;
+  const translatedKeys = allKeys.filter((key) => {
     const val = localeData[key];
     return val !== undefined && val.trim() !== '';
   }).length;
   const coveragePercentage = totalKeys > 0 ? Math.round((translatedKeys / totalKeys) * 100) : 100;
+
+  // Add a new locale
+  const handleAddLocale = async (newLocale: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await fetch(`${APP_ORIGIN}/api/i18n-lens/mutate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'addLocale', locale: newLocale }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || `Server error: ${response.status}`);
+      }
+      await fetchLocales();
+      await fetchKeysMetadata();
+      handleLocaleChange(newLocale);
+    } catch (err: any) {
+      setError(err.message || 'Failed to add locale.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Rename an existing locale
+  const handleRenameLocale = async (oldLocale: string, newLocale: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await fetch(`${APP_ORIGIN}/api/i18n-lens/mutate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'renameLocale', locale: oldLocale, newLocale }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || `Server error: ${response.status}`);
+      }
+      await fetchLocales();
+      await fetchKeysMetadata();
+      if (locale === oldLocale) {
+        handleLocaleChange(newLocale);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to rename locale.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Delete an existing locale
+  const handleDeleteLocale = async (targetLocale: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await fetch(`${APP_ORIGIN}/api/i18n-lens/mutate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'deleteLocale', locale: targetLocale }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || `Server error: ${response.status}`);
+      }
+      
+      const updatedLocales = locales.filter((l) => l !== targetLocale);
+      let nextLocale = 'en';
+      if (updatedLocales.length > 0) {
+        nextLocale = updatedLocales.includes('en') ? 'en' : updatedLocales[0] || 'en';
+      }
+
+      await fetchLocales();
+      await fetchKeysMetadata();
+
+      if (locale === targetLocale) {
+        handleLocaleChange(nextLocale);
+        handleClearSelection();
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete locale.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return {
     selected,
@@ -338,5 +478,15 @@ export const useStudio = () => {
     handleClearSelection,
     confirmDiscard,
     cancelDiscard,
+    locales,
+    handleAddLocale,
+    handleRenameLocale,
+    handleDeleteLocale,
+    allKeys,
+    codeKeys,
+    filterPageOnly,
+    setFilterPageOnly,
+    visibleKeys,
   };
 };
+

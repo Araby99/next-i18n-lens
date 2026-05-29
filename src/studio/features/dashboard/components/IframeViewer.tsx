@@ -55,14 +55,13 @@ export const IframeViewer = ({
               className="w-4 h-4"
               fill="none"
               stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
               viewBox="0 0 24 24"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89M21 3v5h-5"
-              />
+              <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+              <path d="M21 3v5h-5" />
             </svg>
           </button>
         </div>
@@ -85,7 +84,7 @@ export const IframeViewer = ({
               <div className="absolute inset-0 rounded-full border-2 border-t-indigo-500 animate-spin"></div>
             </div>
             <div className="text-center">
-              <h3 className="text-slate-200 font-semibold tracking-wide font-outfit">Connecting to Next.js</h3>
+              <h3 className="text-slate-200 font-semibold tracking-wide font-outfit">Connecting to Project</h3>
               <p className="text-xs text-slate-500 mt-1 font-mono">Waiting for client bridge initialization...</p>
             </div>
           </div>

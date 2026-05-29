@@ -15,6 +15,11 @@ export interface WrapOptions {
    * // t('title') encodes as 'home.title' — matches the JSON structure
    */
   keyPrefix?: string;
+
+  /**
+   * Optional fallback translations to use when the target key is missing.
+   */
+  fallback?: Record<string, any>;
 }
 
 /**
@@ -53,21 +58,49 @@ export function wrapTranslationEngine<T extends object>(
     return engine;
   }
 
-  return buildProxy(engine, options.keyPrefix ?? '');
+  return buildProxy(engine, options.keyPrefix ?? '', options);
 }
 
-function buildProxy<T extends object>(target: T, keyPrefix: string): T {
+function getNestedProperty(obj: any, path: string): any {
+  if (!obj || typeof obj !== 'object') return undefined;
+  if (path in obj) {
+    return obj[path];
+  }
+  const parts = path.split('.');
+  let current = obj;
+  for (const part of parts) {
+    if (current === null || current === undefined || typeof current !== 'object') {
+      return undefined;
+    }
+    current = current[part];
+  }
+  return current;
+}
+
+function buildProxy<T extends object>(
+  target: T,
+  keyPrefix: string,
+  options: WrapOptions
+): T {
   return new Proxy(target, {
     get(obj, prop: string | symbol) {
       if (typeof prop !== 'string') {
         const val = Reflect.get(obj, prop);
         return typeof val === 'object' && val !== null
-          ? buildProxy(val as object, keyPrefix)
+          ? buildProxy(val as object, keyPrefix, options)
           : val;
       }
 
-      const val = Reflect.get(obj, prop);
+      let val = Reflect.get(obj, prop);
       const fullKey = keyPrefix ? `${keyPrefix}.${prop}` : prop;
+
+      // If val is missing, try looking it up in fallback
+      if (val === undefined && options.fallback) {
+        const fbVal = getNestedProperty(options.fallback, fullKey);
+        if (fbVal !== undefined) {
+          val = fbVal;
+        }
+      }
 
       // Leaf string value – encode it with its full key path
       if (typeof val === 'string') {
@@ -84,16 +117,32 @@ function buildProxy<T extends object>(target: T, keyPrefix: string): T {
                 ? `${keyPrefix}.${args[0]}`
                 : args[0]
               : fullKey;
-          if (typeof result === 'string') {
-            return encodeKey(result, calledKey);
+
+          let resolvedValue = result;
+          const isMissing =
+            resolvedValue === undefined ||
+            resolvedValue === null ||
+            resolvedValue === '' ||
+            (typeof resolvedValue === 'string' &&
+              (resolvedValue === args[0] || resolvedValue === calledKey));
+
+          if (isMissing && options.fallback) {
+            const fbVal = getNestedProperty(options.fallback, calledKey);
+            if (fbVal !== undefined) {
+              resolvedValue = fbVal;
+            }
           }
-          return result;
+
+          if (typeof resolvedValue === 'string') {
+            return encodeKey(resolvedValue, calledKey);
+          }
+          return resolvedValue;
         };
       }
 
       // Nested object – recurse with updated key path
       if (typeof val === 'object' && val !== null) {
-        return buildProxy(val as object, fullKey);
+        return buildProxy(val as object, fullKey, options);
       }
 
       return val;
@@ -108,10 +157,26 @@ function buildProxy<T extends object>(target: T, keyPrefix: string): T {
             ? `${keyPrefix}.${args[0]}`
             : args[0]
           : keyPrefix;
-      if (typeof result === 'string') {
-        return encodeKey(result, calledKey);
+
+      let resolvedValue = result;
+      const isMissing =
+        resolvedValue === undefined ||
+        resolvedValue === null ||
+        resolvedValue === '' ||
+        (typeof resolvedValue === 'string' &&
+          (resolvedValue === args[0] || resolvedValue === calledKey));
+
+      if (isMissing && options.fallback) {
+        const fbVal = getNestedProperty(options.fallback, calledKey);
+        if (fbVal !== undefined) {
+          resolvedValue = fbVal;
+        }
       }
-      return result;
+
+      if (typeof resolvedValue === 'string') {
+        return encodeKey(resolvedValue, calledKey);
+      }
+      return resolvedValue;
     },
   });
 }

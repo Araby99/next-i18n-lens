@@ -29,6 +29,13 @@ export const App = () => {
     handleClearSelection,
     confirmDiscard,
     cancelDiscard,
+    locales,
+    handleAddLocale,
+    handleRenameLocale,
+    handleDeleteLocale,
+    filterPageOnly,
+    setFilterPageOnly,
+    visibleKeys,
   } = useStudio();
 
   return (
@@ -94,8 +101,8 @@ export const App = () => {
             </span>
           </div>
 
-          {/* Search Box */}
-          <div className="p-4 border-b border-slate-800/80 shrink-0 bg-slate-900/40">
+          {/* Search Box & Page Filter Toggle */}
+          <div className="p-4 border-b border-slate-800/80 shrink-0 bg-slate-900/40 space-y-3">
             <div className="relative">
               <input
                 type="text"
@@ -108,6 +115,34 @@ export const App = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Scope</span>
+              <div className="flex items-center gap-1 bg-slate-950 border border-slate-850 rounded-lg p-0.5 select-none shrink-0">
+                <button
+                  onClick={() => setFilterPageOnly(false)}
+                  className={`px-2.5 py-1 text-[9px] font-bold rounded-md transition duration-150 ${
+                    !filterPageOnly
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-slate-500 hover:text-slate-300'
+                  }`}
+                >
+                  All Keys
+                </button>
+                <button
+                  onClick={() => setFilterPageOnly(true)}
+                  disabled={visibleKeys === null}
+                  className={`px-2.5 py-1 text-[9px] font-bold rounded-md transition duration-150 ${
+                    filterPageOnly
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-slate-500 hover:text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed'
+                  }`}
+                  title={visibleKeys === null ? 'Waiting for preview connection...' : 'Only show keys on the current page'}
+                >
+                  Page Keys
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Keys list */}
@@ -116,6 +151,7 @@ export const App = () => {
               filteredKeys.map((key) => {
                 const isActive = selected?.key === key;
                 const valueText = localeData[key] || '';
+                const isMissing = localeData[key] === undefined;
                 return (
                   <button
                     key={key}
@@ -126,11 +162,18 @@ export const App = () => {
                         : 'bg-slate-950/20 hover:bg-slate-950/50 border-transparent text-slate-300 hover:text-slate-200'
                     }`}
                   >
-                    <span className="text-[11px] font-semibold font-mono break-all line-clamp-2 leading-relaxed text-indigo-400">
-                      {key}
-                    </span>
+                    <div className="w-full flex items-center justify-between gap-2">
+                      <span className="text-[11px] font-semibold font-mono break-all line-clamp-2 leading-relaxed text-indigo-400">
+                        {key}
+                      </span>
+                      {isMissing && (
+                        <span className="px-1.5 py-0.5 rounded bg-rose-500/10 text-[8px] font-extrabold text-rose-400 border border-rose-500/20 shrink-0 uppercase tracking-wider">
+                          Missing
+                        </span>
+                      )}
+                    </div>
                     <span className="text-[10px] text-slate-500 break-all line-clamp-1">
-                      {valueText || <span className="italic text-slate-700">Empty</span>}
+                      {valueText || <span className="italic text-slate-750">Empty</span>}
                     </span>
                   </button>
                 );
@@ -166,6 +209,10 @@ export const App = () => {
           onLocaleChange={handleLocaleChange}
           onSave={handleSave}
           onClear={handleClearSelection}
+          locales={locales}
+          onAddLocale={handleAddLocale}
+          onRenameLocale={handleRenameLocale}
+          onDeleteLocale={handleDeleteLocale}
         />
       </main>
 

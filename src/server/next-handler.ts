@@ -45,14 +45,56 @@ export function createI18nLensHandler(config: HandlerConfig) {
     }
 
     try {
-      // Support GET request to fetch locale content (Phase 2 feature)
+      // Support GET request to fetch locale content or list locales
       if (request.method === 'GET') {
         const { searchParams } = new URL(request.url);
         const locale = searchParams.get('locale');
+        const action = searchParams.get('action');
+
+        if (action === 'keys') {
+          try {
+            const metadata = await mutator.getKeysMetadata(config.localesPath);
+            return new Response(JSON.stringify(metadata), {
+              status: 200,
+              headers: corsHeaders,
+            });
+          } catch (err: any) {
+            return new Response(
+              JSON.stringify({
+                error: `Failed to fetch keys metadata: ${err.message}`,
+                code: 'KEYS_METADATA_FAILED',
+              }),
+              {
+                status: 500,
+                headers: corsHeaders,
+              }
+            );
+          }
+        }
+
+        if (!locale) {
+          try {
+            const localesList = await mutator.listLocales(config.localesPath);
+            return new Response(JSON.stringify(localesList), {
+              status: 200,
+              headers: corsHeaders,
+            });
+          } catch (err: any) {
+            return new Response(
+              JSON.stringify({
+                error: `Failed to list locales: ${err.message}`,
+                code: 'LIST_LOCALES_FAILED',
+              }),
+              {
+                status: 500,
+                headers: corsHeaders,
+              }
+            );
+          }
+        }
 
         // Loose regex: supports es-419, zh-Hans, etc.
         if (
-          !locale ||
           locale.length < 2 ||
           locale.length > 10 ||
           !/^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,4})?$/.test(locale)
@@ -68,7 +110,7 @@ export function createI18nLensHandler(config: HandlerConfig) {
             }
           );
         }
-
+        
         try {
           const resolvedBasePath = path.resolve(config.localesPath);
           const localePath = path.resolve(resolvedBasePath, locale);
@@ -135,7 +177,88 @@ export function createI18nLensHandler(config: HandlerConfig) {
         );
       }
 
-      const { locale, key, value } = body || {};
+      const { locale, key, value, action, newLocale } = body || {};
+
+      // Handle custom locale management actions
+      if (action === 'addLocale') {
+        if (
+          typeof locale !== 'string' ||
+          locale.length < 2 ||
+          locale.length > 10 ||
+          !/^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,4})?$/.test(locale)
+        ) {
+          return new Response(
+            JSON.stringify({
+              error: 'Invalid locale string. Must be 2-10 characters matching standard code pattern.',
+              code: 'INVALID_LOCALE_FORMAT',
+            }),
+            {
+              status: 400,
+              headers: corsHeaders,
+            }
+          );
+        }
+        await mutator.addLocale(config.localesPath, locale);
+        return new Response(JSON.stringify({ success: true, locale }), {
+          status: 200,
+          headers: corsHeaders,
+        });
+      }
+
+      if (action === 'renameLocale') {
+        if (
+          typeof locale !== 'string' ||
+          locale.length < 2 ||
+          locale.length > 10 ||
+          !/^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,4})?$/.test(locale) ||
+          typeof newLocale !== 'string' ||
+          newLocale.length < 2 ||
+          newLocale.length > 10 ||
+          !/^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,4})?$/.test(newLocale)
+        ) {
+          return new Response(
+            JSON.stringify({
+              error: 'Invalid oldLocale or newLocale parameter.',
+              code: 'INVALID_LOCALE_FORMAT',
+            }),
+            {
+              status: 400,
+              headers: corsHeaders,
+            }
+          );
+        }
+        await mutator.renameLocale(config.localesPath, locale, newLocale);
+        return new Response(JSON.stringify({ success: true, locale, newLocale }), {
+          status: 200,
+          headers: corsHeaders,
+        });
+      }
+
+      if (action === 'deleteLocale') {
+        if (
+          typeof locale !== 'string' ||
+          locale.length < 2 ||
+          locale.length > 10 ||
+          !/^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,4})?$/.test(locale)
+        ) {
+          return new Response(
+            JSON.stringify({
+              error: 'Invalid locale string parameter.',
+              code: 'INVALID_LOCALE_FORMAT',
+            }),
+            {
+              status: 400,
+              headers: corsHeaders,
+            }
+          );
+        }
+        await mutator.deleteLocale(config.localesPath, locale);
+        return new Response(JSON.stringify({ success: true, locale }), {
+          status: 200,
+          headers: corsHeaders,
+        });
+      }
+
 
       // RULE SRV-005: REQUEST BODY VALIDATION (with loose regex matching script and region subtags)
       if (

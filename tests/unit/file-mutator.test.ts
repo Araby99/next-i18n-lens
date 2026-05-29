@@ -12,6 +12,9 @@ vi.mock('fs', () => {
       rename: vi.fn(),
       unlink: vi.fn(),
       stat: vi.fn(),
+      readdir: vi.fn(),
+      mkdir: vi.fn(),
+      rm: vi.fn(),
     },
   };
 });
@@ -209,5 +212,198 @@ describe('FileMutator', () => {
       JSON.stringify({ title: 'New' }, null, 2),
       'utf-8'
     );
+  });
+
+  // ─── Locale Management ──────────────────────────────────────────────────────
+
+  describe('listLocales', () => {
+    it('should list all valid locales from directories and json files', async () => {
+      const mockDirItems = [
+        { name: 'en', isDirectory: () => true, isFile: () => false },
+        { name: 'ar', isDirectory: () => true, isFile: () => false },
+        { name: 'es.json', isDirectory: () => false, isFile: () => true },
+        { name: 'invalid-name', isDirectory: () => true, isFile: () => false },
+        { name: 'random.txt', isDirectory: () => false, isFile: () => true },
+      ];
+      vi.mocked(fs.readdir).mockResolvedValue(mockDirItems as any);
+
+      const locales = await mutator.listLocales(BASE_PATH);
+      expect(locales).toEqual(['ar', 'en', 'es']);
+    });
+  });
+
+  describe('addLocale', () => {
+    it('should add flat locale json file when no directories are present', async () => {
+      vi.mocked(fs.stat).mockRejectedValue(new Error('ENOENT'));
+      vi.mocked(fs.readdir).mockResolvedValue([] as any);
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+
+      await mutator.addLocale(BASE_PATH, 'fr');
+
+      expect(fs.writeFile).toHaveBeenCalledWith(
+        expect.stringContaining('fr.json'),
+        '{}',
+        'utf-8'
+      );
+    });
+
+    it('should create folder-based layout with empty namespace files when references exist', async () => {
+      vi.mocked(fs.stat).mockRejectedValue(new Error('ENOENT'));
+      // Simulate existing "en" directory and standard namespace files
+      vi.mocked(fs.readdir)
+        .mockResolvedValueOnce([
+          { name: 'en', isDirectory: () => true, isFile: () => false } as any
+        ] as any)
+        .mockResolvedValueOnce([
+          'common.json', 'auth.json'
+        ] as any);
+
+      vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+      vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+
+      await mutator.addLocale(BASE_PATH, 'es');
+
+      expect(fs.mkdir).toHaveBeenCalledWith(
+        expect.stringContaining('es'),
+        { recursive: true }
+      );
+      expect(fs.writeFile).toHaveBeenCalledWith(
+        expect.stringContaining(path.join('es', 'common.json')),
+        '{}',
+        'utf-8'
+      );
+      expect(fs.writeFile).toHaveBeenCalledWith(
+        expect.stringContaining(path.join('es', 'auth.json')),
+        '{}',
+        'utf-8'
+      );
+    });
+
+    it('should throw error if locale already exists', async () => {
+      vi.mocked(fs.stat).mockResolvedValue({} as any);
+
+      await expect(
+        mutator.addLocale(BASE_PATH, 'en')
+      ).rejects.toThrow(/already exists/i);
+    });
+  });
+
+  describe('renameLocale', () => {
+    it('should rename a directory when old locale is a directory', async () => {
+      vi.mocked(fs.stat).mockImplementation(async (p: any) => {
+        if (p.includes('en-US')) {
+          const err: any = new Error('ENOENT');
+          err.code = 'ENOENT';
+          throw err;
+        }
+        return { isDirectory: () => true } as any;
+      });
+      vi.mocked(fs.rename).mockResolvedValue(undefined);
+
+      await mutator.renameLocale(BASE_PATH, 'en', 'en-US');
+
+      expect(fs.rename).toHaveBeenCalledWith(
+        expect.stringContaining('en'),
+        expect.stringContaining('en-US')
+      );
+    });
+
+    it('should rename a file when old locale is a file', async () => {
+      vi.mocked(fs.stat).mockImplementation(async (p: any) => {
+        if (p.includes('es-MX')) {
+          const err: any = new Error('ENOENT');
+          err.code = 'ENOENT';
+          throw err;
+        }
+        if (p.includes('es.json')) {
+          return { isDirectory: () => false } as any;
+        }
+        const err: any = new Error('ENOENT');
+        err.code = 'ENOENT';
+        throw err;
+      });
+      vi.mocked(fs.rename).mockResolvedValue(undefined);
+
+      await mutator.renameLocale(BASE_PATH, 'es', 'es-MX');
+
+      expect(fs.rename).toHaveBeenCalledWith(
+        expect.stringContaining('es.json'),
+        expect.stringContaining('es-MX.json')
+      );
+    });
+  });
+
+  describe('deleteLocale', () => {
+    it('should delete a directory recursively when locale is a directory', async () => {
+      vi.mocked(fs.stat).mockResolvedValue({ isDirectory: () => true } as any);
+      vi.mocked(fs.rm).mockResolvedValue(undefined);
+
+      await mutator.deleteLocale(BASE_PATH, 'fr');
+
+      expect(fs.rm).toHaveBeenCalledWith(
+        expect.stringContaining('fr'),
+        { recursive: true, force: true }
+      );
+    });
+
+    it('should unlink file when locale is a file', async () => {
+      vi.mocked(fs.stat)
+        .mockRejectedValueOnce(new Error('ENOENT'))
+        .mockResolvedValueOnce({ isDirectory: () => false } as any);
+      vi.mocked(fs.unlink).mockResolvedValue(undefined);
+
+      await mutator.deleteLocale(BASE_PATH, 'es');
+
+      expect(fs.unlink).toHaveBeenCalledWith(
+        expect.stringContaining('es.json')
+      );
+    });
+  });
+
+  describe('scanCodebaseKeys', () => {
+    it('should extract keys correctly from codebase files using call and proxy patterns', async () => {
+      const codeSnippet = `
+        const title = t('home.welcome_msg');
+        const count = t("auth.login.count");
+        const proxyVal1 = t.dashboard.heading;
+        const proxyVal2 = t?.sidebar?.toggle_btn;
+        const ignoreVal = t.toString();
+      `;
+
+      vi.mocked(fs.readdir).mockResolvedValue([
+        { name: 'page.tsx', isDirectory: () => false, isFile: () => true },
+      ] as any);
+      vi.mocked(fs.readFile).mockResolvedValue(codeSnippet);
+
+      const keys = await mutator.scanCodebaseKeys(BASE_PATH);
+      expect(keys).toEqual([
+        'auth.login.count',
+        'dashboard.heading',
+        'home.welcome_msg',
+        'sidebar.toggle_btn',
+      ]);
+    });
+  });
+
+  describe('scanLocalesKeys', () => {
+    it('should extract and flatten all keys across all existing locales', async () => {
+      // Setup locales directories
+      const mockDirItems = [
+        { name: 'en.json', isDirectory: () => false, isFile: () => true },
+        { name: 'ar.json', isDirectory: () => false, isFile: () => true },
+      ];
+      vi.mocked(fs.readdir).mockResolvedValue(mockDirItems as any);
+      vi.mocked(fs.stat).mockRejectedValue(new Error('ENOENT')); // flat files
+
+      vi.mocked(fs.readFile)
+        .mockResolvedValueOnce(JSON.stringify({ home: { title: 'Welcome', desc: 'Main' } })) // en.json
+        .mockResolvedValueOnce(JSON.stringify({ home: { title: 'Marhaban' } })); // ar.json
+
+      const keys = await mutator.scanLocalesKeys(BASE_PATH);
+      expect(keys).toEqual([
+        'home.desc',
+        'home.title',
+      ]);
+    });
   });
 });

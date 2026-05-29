@@ -18,6 +18,10 @@ vi.mock('../../src/server/file-mutator.js', () => {
     FileMutator: vi.fn().mockImplementation(() => {
       return {
         updateLocaleKey: vi.fn().mockResolvedValue(undefined),
+        listLocales: vi.fn().mockResolvedValue(['en', 'ar', 'es']),
+        addLocale: vi.fn().mockResolvedValue(undefined),
+        renameLocale: vi.fn().mockResolvedValue(undefined),
+        deleteLocale: vi.fn().mockResolvedValue(undefined),
       };
     }),
   };
@@ -224,5 +228,72 @@ describe('createI18nLensHandler', () => {
     const data = await response.json();
     expect(data.common.title).toBe('Welcome');
     expect(data.auth.login).toBe('Log In');
+  });
+
+  it('should handle GET requests without locale param by listing locales', async () => {
+    const handler = createI18nLensHandler(config);
+    const request = new Request('http://localhost:3000/api/mutate', {
+      method: 'GET',
+    });
+
+    const response = await handler(request);
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data).toEqual(['en', 'ar', 'es']);
+
+    const mutatorInstance = vi.mocked(FileMutator).mock.results[0]?.value;
+    expect(mutatorInstance.listLocales).toHaveBeenCalledWith(config.localesPath);
+  });
+
+  it('should handle POST requests to add a locale', async () => {
+    const handler = createI18nLensHandler(config);
+    const request = new Request('http://localhost:3000/api/mutate', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'addLocale', locale: 'fr' }),
+    });
+
+    const response = await handler(request);
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.success).toBe(true);
+    expect(data.locale).toBe('fr');
+
+    const mutatorInstance = vi.mocked(FileMutator).mock.results[0]?.value;
+    expect(mutatorInstance.addLocale).toHaveBeenCalledWith(config.localesPath, 'fr');
+  });
+
+  it('should handle POST requests to rename a locale', async () => {
+    const handler = createI18nLensHandler(config);
+    const request = new Request('http://localhost:3000/api/mutate', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'renameLocale', locale: 'en', newLocale: 'en-US' }),
+    });
+
+    const response = await handler(request);
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.success).toBe(true);
+    expect(data.locale).toBe('en');
+    expect(data.newLocale).toBe('en-US');
+
+    const mutatorInstance = vi.mocked(FileMutator).mock.results[0]?.value;
+    expect(mutatorInstance.renameLocale).toHaveBeenCalledWith(config.localesPath, 'en', 'en-US');
+  });
+
+  it('should handle POST requests to delete a locale', async () => {
+    const handler = createI18nLensHandler(config);
+    const request = new Request('http://localhost:3000/api/mutate', {
+      method: 'POST',
+      body: JSON.stringify({ action: 'deleteLocale', locale: 'de' }),
+    });
+
+    const response = await handler(request);
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.success).toBe(true);
+    expect(data.locale).toBe('de');
+
+    const mutatorInstance = vi.mocked(FileMutator).mock.results[0]?.value;
+    expect(mutatorInstance.deleteLocale).toHaveBeenCalledWith(config.localesPath, 'de');
   });
 });

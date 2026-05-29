@@ -27,6 +27,8 @@
 ## ✨ Features
 
 * 🎯 **In-Context Visual Editing:** Hover over any translated text to highlight it; click to instantly edit in the visual panel.
+* 🔴 **Missing Key Indicators:** Identifies translation keys that are missing in the active locale but exist in the codebase or other translation files, highlighting them with red indicators.
+* 🔄 **Smart Fallback Placeholders:** Automatically renders translation placeholders from alternative languages for missing keys in development, keeping them visible and fully click-to-edit inline.
 * 📁 **Namespaced Folder Support:** Handles nested multi-file folder layouts (e.g., `locales/en/auth.json`) natively, merging files during load and separating them during mutation.
 * 🧼 **Input & Form Sanitization:** Patches controlled inputs and intercepts clipboard actions to strip watermarks in development automatically.
 * ⚡ **Atomic File Operations:** Prevents Next.js hot module replacement (HMR) reading corrupt half-written files via atomic temp-to-final writes.

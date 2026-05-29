@@ -46,6 +46,21 @@ export interface CreateTranslationsOptions {
  * }
  * ```
  */
+function deepMerge(target: any, source: any): any {
+  if (typeof target !== 'object' || target === null) return source;
+  if (typeof source !== 'object' || source === null) return target;
+
+  const result = { ...target };
+  for (const key of Object.keys(source)) {
+    if (key in target) {
+      result[key] = deepMerge(target[key], source[key]);
+    } else {
+      result[key] = source[key];
+    }
+  }
+  return result;
+}
+
 export function createTranslations(
   locale: string,
   options: CreateTranslationsOptions = {}
@@ -101,5 +116,51 @@ export function createTranslations(
     data = loadFlatFile(localesDir, safeLocale, fallbackLocale);
   }
 
-  return wrapTranslationEngine(data);
+  let fallbackData: Record<string, any> = {};
+  if (
+    typeof process !== 'undefined' &&
+    process.env.NODE_ENV === 'development'
+  ) {
+    try {
+      const entries = readdirSync(localesDir);
+      if (Array.isArray(entries)) {
+        for (const entry of entries) {
+          if (entry.startsWith('.') || entry === safeLocale) continue;
+          const entryPath = join(localesDir, entry);
+          let entryIsDir = false;
+          try {
+            entryIsDir = statSync(entryPath).isDirectory();
+          } catch {}
+
+          if (entryIsDir) {
+            try {
+              const files = readdirSync(entryPath);
+              if (Array.isArray(files)) {
+                for (const file of files) {
+                  if (file.endsWith('.json')) {
+                    const ns = file.slice(0, -5);
+                    const raw = readFileSync(join(entryPath, file), 'utf-8');
+                    try {
+                      const parsed = JSON.parse(raw);
+                      fallbackData[ns] = deepMerge(fallbackData[ns] || {}, parsed);
+                    } catch {}
+                  }
+                }
+              }
+            } catch {}
+          } else if (entry.endsWith('.json')) {
+            const name = entry.slice(0, -5);
+            if (name === safeLocale) continue;
+            const raw = readFileSync(entryPath, 'utf-8');
+            try {
+              const parsed = JSON.parse(raw);
+              fallbackData = deepMerge(fallbackData, parsed);
+            } catch {}
+          }
+        }
+      }
+    } catch {}
+  }
+
+  return wrapTranslationEngine(data, { fallback: fallbackData });
 }

@@ -218,4 +218,74 @@ describe('i18nLensVite plugin', () => {
 
     expect(next).toHaveBeenCalled();
   });
+
+  it('should return list of locales on GET request without locale parameter', async () => {
+    // Add another file in tmpDir
+    fs.writeFileSync(path.join(tmpDir, 'es.json'), '{}');
+
+    const { req } = createMockReq('GET', '/api/i18n-lens/mutate');
+    const mock = createMockRes();
+    const next = vi.fn();
+
+    await middleware(req, mock.res, next);
+
+    expect(mock.statusCode).toBe(200);
+    expect(mock.parsedBody).toEqual(['en', 'es']);
+  });
+
+  it('should add a locale file on POST addLocale request', async () => {
+    const { req, readBody } = createMockReq('POST', '/api/i18n-lens/mutate', {
+      action: 'addLocale',
+      locale: 'fr',
+    });
+    const mock = createMockRes();
+    const next = vi.fn();
+
+    const promise = middleware(req, mock.res, next);
+    await Promise.resolve();
+    await readBody();
+    await promise;
+
+    expect(mock.statusCode).toBe(200);
+    expect(mock.parsedBody).toMatchObject({ success: true, locale: 'fr' });
+    expect(fs.existsSync(path.join(tmpDir, 'fr.json'))).toBe(true);
+  });
+
+  it('should rename a locale file on POST renameLocale request', async () => {
+    const { req, readBody } = createMockReq('POST', '/api/i18n-lens/mutate', {
+      action: 'renameLocale',
+      locale: 'en',
+      newLocale: 'en-GB',
+    });
+    const mock = createMockRes();
+    const next = vi.fn();
+
+    const promise = middleware(req, mock.res, next);
+    await Promise.resolve();
+    await readBody();
+    await promise;
+
+    expect(mock.statusCode).toBe(200);
+    expect(mock.parsedBody).toMatchObject({ success: true, locale: 'en', newLocale: 'en-GB' });
+    expect(fs.existsSync(path.join(tmpDir, 'en.json'))).toBe(false);
+    expect(fs.existsSync(path.join(tmpDir, 'en-GB.json'))).toBe(true);
+  });
+
+  it('should delete a locale file on POST deleteLocale request', async () => {
+    const { req, readBody } = createMockReq('POST', '/api/i18n-lens/mutate', {
+      action: 'deleteLocale',
+      locale: 'en',
+    });
+    const mock = createMockRes();
+    const next = vi.fn();
+
+    const promise = middleware(req, mock.res, next);
+    await Promise.resolve();
+    await readBody();
+    await promise;
+
+    expect(mock.statusCode).toBe(200);
+    expect(mock.parsedBody).toMatchObject({ success: true, locale: 'en' });
+    expect(fs.existsSync(path.join(tmpDir, 'en.json'))).toBe(false);
+  });
 });

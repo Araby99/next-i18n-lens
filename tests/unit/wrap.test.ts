@@ -1,0 +1,79 @@
+// @vitest-environment node
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { wrapTranslationEngine } from '../../src/client/wrap.js';
+import { decodeKey } from '../../src/client/watermark.js';
+
+describe('wrapTranslationEngine', () => {
+  beforeEach(() => {
+    vi.stubEnv('NODE_ENV', 'development');
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('should return the original engine unchanged in production', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    const engine = { welcome: 'Hello' };
+    const wrapped = wrapTranslationEngine(engine);
+    expect(wrapped).toBe(engine);
+  });
+
+  it('should watermark existing properties in development', () => {
+    const engine = { welcome: 'Hello' };
+    const wrapped = wrapTranslationEngine(engine);
+    expect(wrapped.welcome).not.toBe('Hello');
+    expect(decodeKey(wrapped.welcome)?.cleanText).toBe('Hello');
+    expect(decodeKey(wrapped.welcome)?.key).toBe('welcome');
+  });
+
+  it('should fallback to options.fallback for missing properties', () => {
+    const engine = { welcome: 'Hello' } as any;
+    const fallback = { welcome: 'Hi', title: 'Home Page', contact: { email: 'test@example.com' } };
+    const wrapped = wrapTranslationEngine(engine, { fallback });
+
+    // exists in active -> welcome uses active
+    expect(decodeKey(wrapped.welcome)?.cleanText).toBe('Hello');
+
+    // missing in active but exists in fallback -> title uses fallback
+    expect(decodeKey(wrapped.title)?.cleanText).toBe('Home Page');
+    expect(decodeKey(wrapped.title)?.key).toBe('title');
+
+    // nested missing -> contact.email uses fallback
+    expect(decodeKey(wrapped.contact?.email)?.cleanText).toBe('test@example.com');
+    expect(decodeKey(wrapped.contact?.email)?.key).toBe('contact.email');
+  });
+
+  it('should fallback when called as a function returning the key name', () => {
+    // Simulates a next-intl or react-i18next 't' function returning key as fallback
+    const tMock = vi.fn((key: string) => {
+      if (key === 'welcome') return 'Hello';
+      return key; // mock standard fallback returning the key itself
+    });
+
+    const fallback = { welcome: 'Hi', title: 'Home Page' };
+    const wrappedT = wrapTranslationEngine(tMock, { fallback }) as any;
+
+    // active found
+    const res1 = wrappedT('welcome');
+    expect(decodeKey(res1)?.cleanText).toBe('Hello');
+    expect(decodeKey(res1)?.key).toBe('welcome');
+
+    // active missing (mock returned key name) -> uses fallback
+    const res2 = wrappedT('title');
+    expect(decodeKey(res2)?.cleanText).toBe('Home Page');
+    expect(decodeKey(res2)?.key).toBe('title');
+  });
+
+  it('should respect keyPrefix option when retrieving fallback', () => {
+    const engine = {} as any;
+    const fallback = { home: { title: 'Fallback Title' } };
+    const wrapped = wrapTranslationEngine(engine, {
+      keyPrefix: 'home',
+      fallback,
+    });
+
+    expect(decodeKey(wrapped.title)?.cleanText).toBe('Fallback Title');
+    expect(decodeKey(wrapped.title)?.key).toBe('home.title');
+  });
+});

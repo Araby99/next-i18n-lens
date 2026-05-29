@@ -66,4 +66,59 @@ describe('createTranslations', () => {
 
     expect(t.fallback).toBeDefined();
   });
+
+  it('should retrieve missing key from alternative locales in development mode', () => {
+    vi.mocked(fs.statSync).mockImplementation(() => {
+      return { isDirectory: () => false } as any;
+    });
+
+    vi.mocked(fs.readdirSync).mockReturnValue(['en.json' as any, 'es.json' as any]);
+
+    vi.mocked(fs.readFileSync).mockImplementation((p: any) => {
+      const filepath = p.toString();
+      if (filepath.endsWith('en.json')) {
+        return JSON.stringify({ welcome: 'Welcome' });
+      }
+      if (filepath.endsWith('es.json')) {
+        return JSON.stringify({ welcome: 'Hola', details: { title: 'Detalles' } });
+      }
+      return '{}';
+    });
+
+    const t = createTranslations('en', {
+      localesDir: LOCALES_DIR,
+      supportedLocales: ['en', 'es'],
+    });
+
+    // welcome is in active locale 'en' -> returned watermarked
+    expect(t.welcome).toContain('Welcome');
+
+    // details.title is missing in 'en' but exists in 'es' -> returns watermarked Spanish fallback value
+    expect(t.details?.title).toContain('Detalles');
+  });
+
+  it('should not fallback in production mode', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.mocked(fs.statSync).mockReturnValue({ isDirectory: () => false } as any);
+    vi.mocked(fs.readdirSync).mockReturnValue(['en.json' as any, 'es.json' as any]);
+    vi.mocked(fs.readFileSync).mockImplementation((p: any) => {
+      const filepath = p.toString();
+      if (filepath.endsWith('en.json')) {
+        return JSON.stringify({ welcome: 'Welcome' });
+      }
+      if (filepath.endsWith('es.json')) {
+        return JSON.stringify({ details: { title: 'Detalles' } });
+      }
+      return '{}';
+    });
+
+    const t = createTranslations('en', {
+      localesDir: LOCALES_DIR,
+      supportedLocales: ['en', 'es'],
+    });
+
+    // In production, no watermarking and no fallback retrieval
+    expect(t.welcome).toBe('Welcome');
+    expect(t.details?.title).toBeUndefined();
+  });
 });

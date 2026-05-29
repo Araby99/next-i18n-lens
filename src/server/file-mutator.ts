@@ -193,4 +193,421 @@ export class FileMutator {
       current = current[key];
     }
   }
+
+  /**
+   * Lists all locale codes dynamically scanned from the locales directory.
+   */
+  async listLocales(basePath: string): Promise<string[]> {
+    if (process.env['NODE_ENV'] !== 'development') {
+      throw new Error('[i18n-lens] FileMutator can only be executed in development mode.');
+    }
+
+    const resolvedBasePath = path.resolve(basePath);
+    const items = await fs.readdir(resolvedBasePath, { withFileTypes: true });
+    const localesSet = new Set<string>();
+    const LOCALE_RE = /^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,4})?$/;
+
+    for (const item of items) {
+      if (item.isDirectory()) {
+        if (LOCALE_RE.test(item.name)) {
+          localesSet.add(item.name);
+        }
+      } else if (item.isFile() && item.name.endsWith('.json')) {
+        const name = path.basename(item.name, '.json');
+        if (LOCALE_RE.test(name)) {
+          localesSet.add(name);
+        }
+      }
+    }
+
+    return Array.from(localesSet).sort();
+  }
+
+  /**
+   * Adds a new locale directory/file based on current repository structure.
+   */
+  async addLocale(basePath: string, locale: string): Promise<void> {
+    if (process.env['NODE_ENV'] !== 'development') {
+      throw new Error('[i18n-lens] FileMutator can only be executed in development mode.');
+    }
+
+    if (
+      locale.includes('..') ||
+      locale.includes('/') ||
+      locale.includes('\\') ||
+      locale.includes('%') ||
+      locale.includes('\0')
+    ) {
+      throw new Error(`[i18n-lens] Path traversal attempt detected in locale identifier: "${locale}"`);
+    }
+
+    const LOCALE_RE = /^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,4})?$/;
+    if (!LOCALE_RE.test(locale)) {
+      throw new Error(`[i18n-lens] Invalid locale format: "${locale}"`);
+    }
+
+    const resolvedBasePath = path.resolve(basePath);
+    const localePath = path.resolve(resolvedBasePath, locale);
+
+    if (!localePath.startsWith(resolvedBasePath)) {
+      throw new Error(`[i18n-lens] Path traversal attempt: Resolved file path must start with basePath.`);
+    }
+
+    // Check if directory or file already exists
+    let exists = false;
+    try {
+      await fs.stat(localePath);
+      exists = true;
+    } catch {}
+    try {
+      await fs.stat(`${localePath}.json`);
+      exists = true;
+    } catch {}
+
+    if (exists) {
+      throw new Error(`[i18n-lens] Locale "${locale}" already exists.`);
+    }
+
+    // Scan basePath for layout detection: if we find any directories matching locale regex,
+    // we use folder-based namespaces.
+    const items = await fs.readdir(resolvedBasePath, { withFileTypes: true });
+    let referenceDir: string | null = null;
+    for (const item of items) {
+      if (item.isDirectory() && LOCALE_RE.test(item.name)) {
+        referenceDir = item.name;
+        break;
+      }
+    }
+
+    if (referenceDir) {
+      // Create folder-based layout: create directory and write empty namespace files corresponding
+      // to those in referenceDir
+      await fs.mkdir(localePath, { recursive: true });
+      const refPath = path.resolve(resolvedBasePath, referenceDir);
+      const files = await fs.readdir(refPath);
+      for (const file of files) {
+        if (file.endsWith('.json')) {
+          await fs.writeFile(path.join(localePath, file), '{}', 'utf-8');
+        }
+      }
+    } else {
+      // Flat layout: write empty json file
+      await fs.writeFile(`${localePath}.json`, '{}', 'utf-8');
+    }
+
+    console.log(`[i18n-lens] Added locale '${locale}'`);
+  }
+
+  /**
+   * Renames an existing locale (directory or file) to a new name.
+   */
+  async renameLocale(basePath: string, oldLocale: string, newLocale: string): Promise<void> {
+    if (process.env['NODE_ENV'] !== 'development') {
+      throw new Error('[i18n-lens] FileMutator can only be executed in development mode.');
+    }
+
+    if (
+      oldLocale.includes('..') || oldLocale.includes('/') || oldLocale.includes('\\') || oldLocale.includes('%') || oldLocale.includes('\0') ||
+      newLocale.includes('..') || newLocale.includes('/') || newLocale.includes('\\') || newLocale.includes('%') || newLocale.includes('\0')
+    ) {
+      throw new Error('[i18n-lens] Path traversal attempt detected');
+    }
+
+    const LOCALE_RE = /^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,4})?$/;
+    if (!LOCALE_RE.test(oldLocale) || !LOCALE_RE.test(newLocale)) {
+      throw new Error(`[i18n-lens] Invalid locale format`);
+    }
+
+    const resolvedBasePath = path.resolve(basePath);
+    const oldPath = path.resolve(resolvedBasePath, oldLocale);
+    const newPath = path.resolve(resolvedBasePath, newLocale);
+
+    if (!oldPath.startsWith(resolvedBasePath) || !newPath.startsWith(resolvedBasePath)) {
+      throw new Error('[i18n-lens] Path traversal attempt');
+    }
+
+    let isDir = false;
+    let exists = false;
+    try {
+      const stats = await fs.stat(oldPath);
+      isDir = stats.isDirectory();
+      exists = true;
+    } catch {}
+
+    let isFile = false;
+    if (!exists) {
+      try {
+        await fs.stat(`${oldPath}.json`);
+        isFile = true;
+        exists = true;
+      } catch {}
+    }
+
+    if (!exists) {
+      throw new Error(`[i18n-lens] Locale "${oldLocale}" does not exist.`);
+    }
+
+    // Check if new path already exists
+    let newExists = false;
+    try {
+      await fs.stat(newPath);
+      newExists = true;
+    } catch {}
+    try {
+      await fs.stat(`${newPath}.json`);
+      newExists = true;
+    } catch {}
+
+    if (newExists) {
+      throw new Error(`[i18n-lens] Target locale "${newLocale}" already exists.`);
+    }
+
+    if (isDir) {
+      await fs.rename(oldPath, newPath);
+    } else if (isFile) {
+      await fs.rename(`${oldPath}.json`, `${newPath}.json`);
+    }
+
+    console.log(`[i18n-lens] Renamed locale '${oldLocale}' to '${newLocale}'`);
+  }
+
+  /**
+   * Deletes an existing locale (directory or file).
+   */
+  async deleteLocale(basePath: string, locale: string): Promise<void> {
+    if (process.env['NODE_ENV'] !== 'development') {
+      throw new Error('[i18n-lens] FileMutator can only be executed in development mode.');
+    }
+
+    if (
+      locale.includes('..') ||
+      locale.includes('/') ||
+      locale.includes('\\') ||
+      locale.includes('%') ||
+      locale.includes('\0')
+    ) {
+      throw new Error('[i18n-lens] Path traversal attempt detected');
+    }
+
+    const LOCALE_RE = /^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,4})?$/;
+    if (!LOCALE_RE.test(locale)) {
+      throw new Error(`[i18n-lens] Invalid locale format`);
+    }
+
+    const resolvedBasePath = path.resolve(basePath);
+    const localePath = path.resolve(resolvedBasePath, locale);
+
+    if (!localePath.startsWith(resolvedBasePath)) {
+      throw new Error('[i18n-lens] Path traversal attempt');
+    }
+
+    let isDir = false;
+    let exists = false;
+    try {
+      const stats = await fs.stat(localePath);
+      isDir = stats.isDirectory();
+      exists = true;
+    } catch {}
+
+    let isFile = false;
+    if (!exists) {
+      try {
+        await fs.stat(`${localePath}.json`);
+        isFile = true;
+        exists = true;
+      } catch {}
+    }
+
+    if (!exists) {
+      throw new Error(`[i18n-lens] Locale "${locale}" does not exist.`);
+    }
+
+    if (isDir) {
+      await fs.rm(localePath, { recursive: true, force: true });
+    } else if (isFile) {
+      await fs.unlink(`${localePath}.json`);
+    }
+
+    console.log(`[i18n-lens] Deleted locale '${locale}'`);
+  }
+
+  /**
+   * Scans codebase directory recursively for references to translation keys.
+   */
+  async scanCodebaseKeys(basePath: string): Promise<string[]> {
+    if (process.env['NODE_ENV'] !== 'development') {
+      throw new Error('[i18n-lens] FileMutator can only be executed in development mode.');
+    }
+
+    const resolvedBasePath = path.resolve(basePath);
+    const projectRoot = path.dirname(resolvedBasePath);
+    const keysSet = new Set<string>();
+
+    const IGNORE_DIRS = [
+      'node_modules',
+      '.next',
+      'dist',
+      'build',
+      '.git',
+      'coverage',
+      'test-results',
+      'out',
+      '.idea',
+      '.vscode',
+    ];
+
+    const CALL_RE = /\bt\(\s*['"`]([a-zA-Z0-9._-]+)['"`]\s*\)/g;
+    const PROP_RE = /\bt(?:\??\.[a-zA-Z0-9_]+)+/g;
+    const IGNORE_PROPS = new Set([
+      'toString',
+      'length',
+      'constructor',
+      'prototype',
+      'map',
+      'forEach',
+      'filter',
+      'reduce',
+      'call',
+      'apply',
+      'bind',
+      'name',
+      'displayName',
+    ]);
+
+    const scanDir = async (dir: string) => {
+      let items: any[] = [];
+      try {
+        items = await fs.readdir(dir, { withFileTypes: true });
+      } catch {
+        return;
+      }
+
+      for (const item of items) {
+        const fullPath = path.join(dir, item.name);
+        if (item.isDirectory()) {
+          if (!IGNORE_DIRS.includes(item.name)) {
+            await scanDir(fullPath);
+          }
+        } else if (item.isFile()) {
+          const ext = path.extname(item.name);
+          if (['.ts', '.tsx', '.js', '.jsx'].includes(ext)) {
+            try {
+              const content = await fs.readFile(fullPath, 'utf-8');
+
+              let match;
+              CALL_RE.lastIndex = 0;
+              while ((match = CALL_RE.exec(content)) !== null) {
+                if (match[1]) {
+                  keysSet.add(match[1]);
+                }
+              }
+
+              let propMatch;
+              PROP_RE.lastIndex = 0;
+              while ((propMatch = PROP_RE.exec(content)) !== null) {
+                const rawMatch = propMatch[0];
+                const clean = rawMatch.replace(/\bt/, '').replace(/\?/g, '');
+                const segments = clean.split('.').map(s => s.trim()).filter(Boolean);
+                if (segments.length > 0 && !segments.some(s => IGNORE_PROPS.has(s))) {
+                  keysSet.add(segments.join('.'));
+                }
+              }
+            } catch {}
+          }
+        }
+      }
+    };
+
+    await scanDir(projectRoot);
+    return Array.from(keysSet).sort();
+  }
+
+  /**
+   * Scans all locale files/folders to compile the set of all keys currently in locales.
+   */
+  async scanLocalesKeys(basePath: string): Promise<string[]> {
+    if (process.env['NODE_ENV'] !== 'development') {
+      throw new Error('[i18n-lens] FileMutator can only be executed in development mode.');
+    }
+
+    const locales = await this.listLocales(basePath);
+    const keysSet = new Set<string>();
+
+    for (const locale of locales) {
+      try {
+        const resolvedBasePath = path.resolve(basePath);
+        const localePath = path.resolve(resolvedBasePath, locale);
+
+        let isDir = false;
+        try {
+          const stats = await fs.stat(localePath);
+          isDir = stats.isDirectory();
+        } catch {}
+
+        let data: Record<string, any> = {};
+
+        if (isDir) {
+          const files = await fs.readdir(localePath);
+          for (const file of files) {
+            if (file.endsWith('.json')) {
+              const ns = path.basename(file, '.json');
+              try {
+                const content = await fs.readFile(path.join(localePath, file), 'utf-8');
+                data[ns] = JSON.parse(content);
+              } catch {}
+            }
+          }
+        } else {
+          try {
+            if (
+              locale.includes('..') ||
+              locale.includes('/') ||
+              locale.includes('\\') ||
+              locale.includes('%') ||
+              locale.includes('\0')
+            ) {
+              continue;
+            }
+            const filePath = path.resolve(resolvedBasePath, `${locale}.json`);
+            if (filePath.startsWith(resolvedBasePath)) {
+              const content = await fs.readFile(filePath, 'utf-8');
+              data = JSON.parse(content);
+            }
+          } catch {}
+        }
+
+        const flatten = (obj: any, prefix = '') => {
+          if (!obj || typeof obj !== 'object') return;
+          for (const key in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, key)) {
+              const newKey = prefix ? `${prefix}.${key}` : key;
+              if (typeof obj[key] === 'object' && obj[key] !== null && !Array.isArray(obj[key])) {
+                flatten(obj[key], newKey);
+              } else {
+                keysSet.add(newKey);
+              }
+            }
+          }
+        };
+
+        flatten(data);
+      } catch {}
+    }
+
+    return Array.from(keysSet).sort();
+  }
+
+  /**
+   * Returns merged lists of keys from codebase and existing locale files.
+   */
+  async getKeysMetadata(basePath: string): Promise<{ allKeys: string[]; codeKeys: string[] }> {
+    const codeKeys = await this.scanCodebaseKeys(basePath);
+    const localeKeys = await this.scanLocalesKeys(basePath);
+    const allKeys = Array.from(new Set([...codeKeys, ...localeKeys])).sort();
+    return {
+      allKeys,
+      codeKeys,
+    };
+  }
 }
+

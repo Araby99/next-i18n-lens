@@ -96,13 +96,37 @@ export function i18nLensVite(config: VitePluginConfig) {
         setHeaders();
 
         try {
-          // ─── GET: Fetch locale dictionary ──────────────────────────────
+          // ─── GET: Fetch locale dictionary or list locales ───────────────
           if (req.method === 'GET') {
             const urlObj = new URL(req.url, 'http://localhost');
             const locale = urlObj.searchParams.get('locale');
+            const action = urlObj.searchParams.get('action');
+
+            if (action === 'keys') {
+              try {
+                const metadata = await mutator.getKeysMetadata(resolvedLocalesPath);
+                res.statusCode = 200;
+                res.end(JSON.stringify(metadata));
+              } catch (err: any) {
+                res.statusCode = 500;
+                res.end(JSON.stringify({ error: `Failed to fetch keys metadata: ${err.message}`, code: 'KEYS_METADATA_FAILED' }));
+              }
+              return;
+            }
+
+            if (!locale) {
+              try {
+                const localesList = await mutator.listLocales(resolvedLocalesPath);
+                res.statusCode = 200;
+                res.end(JSON.stringify(localesList));
+              } catch (err: any) {
+                res.statusCode = 500;
+                res.end(JSON.stringify({ error: `Failed to list locales: ${err.message}`, code: 'LIST_LOCALES_FAILED' }));
+              }
+              return;
+            }
 
             if (
-              !locale ||
               locale.length < 2 ||
               locale.length > 10 ||
               !LOCALE_RE.test(locale)
@@ -165,7 +189,64 @@ export function i18nLensVite(config: VitePluginConfig) {
               return;
             }
 
-            const { locale, key, value } = body || {};
+            const { locale, key, value, action, newLocale } = body || {};
+
+            // Handle custom locale management actions
+            if (action === 'addLocale') {
+              if (
+                typeof locale !== 'string' ||
+                locale.length < 2 ||
+                locale.length > 10 ||
+                !LOCALE_RE.test(locale)
+              ) {
+                res.statusCode = 400;
+                res.end(JSON.stringify({ error: 'Invalid locale string parameter.', code: 'INVALID_LOCALE_FORMAT' }));
+                return;
+              }
+              await mutator.addLocale(resolvedLocalesPath, locale);
+              res.statusCode = 200;
+              res.end(JSON.stringify({ success: true, locale }));
+              return;
+            }
+
+            if (action === 'renameLocale') {
+              if (
+                typeof locale !== 'string' ||
+                locale.length < 2 ||
+                locale.length > 10 ||
+                !LOCALE_RE.test(locale) ||
+                typeof newLocale !== 'string' ||
+                newLocale.length < 2 ||
+                newLocale.length > 10 ||
+                !LOCALE_RE.test(newLocale)
+              ) {
+                res.statusCode = 400;
+                res.end(JSON.stringify({ error: 'Invalid oldLocale or newLocale parameter.', code: 'INVALID_LOCALE_FORMAT' }));
+                return;
+              }
+              await mutator.renameLocale(resolvedLocalesPath, locale, newLocale);
+              res.statusCode = 200;
+              res.end(JSON.stringify({ success: true, locale, newLocale }));
+              return;
+            }
+
+            if (action === 'deleteLocale') {
+              if (
+                typeof locale !== 'string' ||
+                locale.length < 2 ||
+                locale.length > 10 ||
+                !LOCALE_RE.test(locale)
+              ) {
+                res.statusCode = 400;
+                res.end(JSON.stringify({ error: 'Invalid locale string parameter.', code: 'INVALID_LOCALE_FORMAT' }));
+                return;
+              }
+              await mutator.deleteLocale(resolvedLocalesPath, locale);
+              res.statusCode = 200;
+              res.end(JSON.stringify({ success: true, locale }));
+              return;
+            }
+
 
             if (
               typeof locale !== 'string' ||
