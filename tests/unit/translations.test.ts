@@ -1,0 +1,69 @@
+// @vitest-environment node
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { createTranslations } from '../../src/server/translations.js';
+import * as fs from 'fs';
+import path from 'path';
+
+vi.mock('fs', () => {
+  return {
+    readFileSync: vi.fn(),
+    readdirSync: vi.fn(),
+    statSync: vi.fn(),
+  };
+});
+
+describe('createTranslations', () => {
+  const LOCALES_DIR = '/project/locales';
+
+  beforeEach(() => {
+    vi.stubEnv('NODE_ENV', 'development');
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('should load a flat locale JSON file', () => {
+    vi.mocked(fs.statSync).mockReturnValue({ isDirectory: () => false } as any);
+    vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({ greeting: 'Hello' }));
+
+    const t = createTranslations('en', {
+      localesDir: LOCALES_DIR,
+      supportedLocales: ['en'],
+    });
+
+    expect(t.greeting).toContain('Hello'); // contains watermark in development
+    expect(fs.readFileSync).toHaveBeenCalledWith(path.join(LOCALES_DIR, 'en.json'), 'utf-8');
+  });
+
+  it('should read and merge all JSON files in a namespace directory', () => {
+    vi.mocked(fs.statSync).mockReturnValue({ isDirectory: () => true } as any);
+    vi.mocked(fs.readdirSync).mockReturnValue(['common.json' as any, 'auth.json' as any]);
+    vi.mocked(fs.readFileSync)
+      .mockReturnValueOnce(JSON.stringify({ welcome: 'Welcome' }))
+      .mockReturnValueOnce(JSON.stringify({ login: 'Sign In' }));
+
+    const t = createTranslations('en', {
+      localesDir: LOCALES_DIR,
+      supportedLocales: ['en'],
+    });
+
+    expect(t.common?.welcome).toBeDefined();
+    expect(t.auth?.login).toBeDefined();
+    expect(fs.readdirSync).toHaveBeenCalledWith(path.join(LOCALES_DIR, 'en'));
+  });
+
+  it('should fall back to safe locale flat file if directory readdir fails', () => {
+    vi.mocked(fs.statSync).mockReturnValue({ isDirectory: () => true } as any);
+    vi.mocked(fs.readdirSync).mockImplementation(() => { throw new Error('readdir error'); });
+    vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({ fallback: 'yes' }));
+
+    const t = createTranslations('en', {
+      localesDir: LOCALES_DIR,
+      supportedLocales: ['en'],
+    });
+
+    expect(t.fallback).toBeDefined();
+  });
+});

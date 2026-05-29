@@ -1,0 +1,9 @@
+{
+  "home": {
+    "welcome_msg": "Welcome Back to Production",
+    "title": "Local visual studio lens"
+  },
+  "nav": {
+    "home": "Home"
+  }
+}
