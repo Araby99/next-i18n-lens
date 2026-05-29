@@ -1,6 +1,6 @@
 {
   "name": "next-i18n-lens",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "A local-first, zero-dependency visual translation studio for Next.js (App Router) and React.",
   "license": "MIT",
   "author": "Araby99",
