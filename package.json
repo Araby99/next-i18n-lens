@@ -4,7 +4,7 @@
   "type": "module",
   "main": "./dist/server/index.js",
   "bin": {
-    "next-i18n-lens": "./dist/codemod/index.js"
+    "next-i18n-lens": "dist/codemod/index.js"
   },
   "exports": {
     "./client": {
