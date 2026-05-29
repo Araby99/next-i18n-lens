@@ -17,15 +17,6 @@
 
 `next-i18n-lens` bridges your running application UI with your local JSON translation files using **Zero-Width Unicode Watermarking**. 
 
-```mermaid
-graph TD
-    A[Locale JSON Files] -->|1. Load & Watermark| B(Server / Client Translation Engine)
-    B -->|2. Render invisible characters| C[Running App UI in Browser]
-    C -->|3. DOM Scanner Decodes Keys| D{Hover & Click UI Element}
-    D -->|4. Post updates| E[Visual Translation Studio]
-    E -->|5. Atomic Write| A
-```
-
 1. **Watermark Encoding:** In development, when a translation key is looked up, the library prepends an invisible Unicode watermark (using combinations of `\u200D` (ZWJ), `\u200B` (ZWS), and `\u200C` (ZWNJ)) to the text.
 2. **DOM Scanning:** A lightweight dev-only browser listener scans the active DOM, decodes the watermarks, and dynamically hooks visual highlights onto translated elements.
 3. **Input & Clipboard Sanitization:** To ensure the watermarks never pollute your database, forms, or clipboard, the library automatically intercepts `'copy'`/`'paste'` events and patches controlled input elements at runtime.
