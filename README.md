@@ -5,6 +5,7 @@
   <p>A local-first, zero-dependency visual translation studio for Next.js (App Router) and React.</p>
   
   <p align="center">
+    <a href="https://github.com/Araby99/next-i18n-lens/actions/workflows/ci.yml"><img src="https://github.com/Araby99/next-i18n-lens/actions/workflows/ci.yml/badge.svg" alt="CI Status" /></a>
     <a href="https://www.npmjs.com/package/next-i18n-lens"><img src="https://img.shields.io/npm/v/next-i18n-lens.svg?style=flat-square" alt="NPM Version" /></a>
     <a href="https://www.npmjs.com/package/next-i18n-lens"><img src="https://img.shields.io/npm/dm/next-i18n-lens.svg?style=flat-square" alt="NPM Downloads" /></a>
     <a href="https://github.com/Araby99/next-i18n-lens/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/next-i18n-lens.svg?style=flat-square" alt="License" /></a>
